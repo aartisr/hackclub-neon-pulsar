@@ -13,14 +13,15 @@ A high-octane, zero-latency 3D multiplayer disc combat sport built for the brows
   - [3. Controls & Flight Mechanics](#3-controls--flight-mechanics)
   - [4. Game Rules & Objectives](#4-game-rules--objectives)
   - [5. Power-Up System](#5-power-up-system)
-  - [6. Spectating System](#6-spectating-system)
-  - [7. Highlight Camera & Net Particle Bursts](#7-highlight-camera--net-particle-bursts)
-  - [8. Haptic Feedback (Vibration API)](#8-haptic-feedback-vibration-api)
-  - [9. Career Statistics](#9-career-statistics)
+  - [6. 3D Match Replay System](#6-3d-match-replay-system)
+  - [7. Spectating System](#7-spectating-system)
+  - [8. Highlight Camera & Net Particle Bursts](#8-highlight-camera--net-particle-bursts)
+  - [9. Haptic Feedback (Vibration API)](#9-haptic-feedback-vibration-api)
+  - [10. Career Statistics & Tier Ranking System](#10-career-statistics--tier-ranking-system)
 - [Technical Architecture](#technical-architecture)
   - [Architecture Overview](#architecture-overview)
   - [P2P Network Topology & Protocol](#p2p-network-topology--protocol)
-  - [Physics & Collision Engine](#physics--collision-engine)
+  - [Physics & Dynamic Light Probes](#physics--dynamic-light-probes)
   - [3D Rendering & Post-Processing](#3d-rendering--post-processing)
   - [Procedural Audio Synthesis](#procedural-audio-synthesis)
   - [State Synchronization & Framer Motion Transitions](#state-synchronization--framer-motion-transitions)
@@ -123,7 +124,18 @@ Power-ups animate with orbital spin in Three.js and despawn automatically upon c
 
 ---
 
-### 6. Spectating System
+### 6. 3D Match Replay System
+
+After a match concludes, pilots can click **Watch 3D Match Replay** on the victory screen to enter a full 3D playback simulation:
+- **Telemetry Recording**: Captures 30 FPS spatial telemetry (disc trajectory, velocity, player coordinates, scores) during live play (~250 KB memory footprint per match).
+- **Butter-Smooth 60 FPS Interpolation**: Uses linear vector lerping between keyframes to render liquid-smooth 60 FPS spatial playback.
+- **Timeline Scrubbing & Controls**: Interactive timeline range slider with precise timestamp display, Play/Pause toggle, and 5-second Jump Rewind/Forward buttons.
+- **Variable Playback Speeds**: Toggle between `0.5x` (slow-motion analysis), `1.0x` (real-time), `2.0x`, and `4.0x` fast-forward speeds.
+- **Cinematic Replay Camera Modes**: Switch seamlessly between **Follow Disc** (tracks disc movement across zero-G space) and **Orbit View** (spins wide cinematic angles around the entire arena grid).
+
+---
+
+### 7. Spectating System
 
 If a player connects to an arena while a match is currently active (`status === 'playing'`):
 - The joining player is automatically flagged as `isSpectator: true`.
@@ -133,7 +145,7 @@ If a player connects to an arena while a match is currently active (`status === 
 
 ---
 
-### 7. Highlight Camera & Net Particle Bursts
+### 8. Highlight Camera & Net Particle Bursts
 
 Whenever a goal is scored:
 - **Cinematic Zoom**: The 3D camera smoothly glides into a slow-motion highlight zoom focused squarely on the scoring goal portal.
@@ -142,7 +154,7 @@ Whenever a goal is scored:
 
 ---
 
-### 8. Haptic Feedback (Vibration API)
+### 9. Haptic Feedback (Vibration API)
 
 Supported mobile devices and vibration-capable browsers receive tactile physical feedback:
 - **Wall Bounce**: Subtle 20ms haptic tap whenever the high-speed disc ricochets off arena walls.
@@ -150,12 +162,15 @@ Supported mobile devices and vibration-capable browsers receive tactile physical
 
 ---
 
-### 9. Career Statistics
+### 10. Career Statistics & Tier Ranking System
 
 All pilot achievements persist locally via `localStorage` through `useCareerStats`:
-- **Career Goals**: Cumulative disc goals scored across all sessions.
-- **Wins & Games**: Total matches played and combat victories.
-- **Master Pilot Badge**: Displayed prominently on the main menu interface.
+- **Career Goals & Win Rate**: Tracks cumulative goals scored, total games played, total wins, and win percentage.
+- **Rank Tier System**: Earn dynamic emblems displayed on the main menu based on career wins:
+  - 🥉 **Bronze Pilot**: 0–4 Wins
+  - 🥈 **Silver Pilot**: 5–14 Wins
+  - 🥇 **Gold Pilot**: 15–29 Wins
+  - 💎 **Neon Pulsar Tier**: 30+ Wins (unlocks glowing neon emblem)
 
 ---
 
@@ -223,7 +238,7 @@ export type GameAction =
 
 ---
 
-### Physics & Collision Engine
+### Physics & Dynamic Light Probes
 
 Located in `src/lib/game/Physics.ts`:
 
@@ -231,6 +246,8 @@ Located in `src/lib/game/Physics.ts`:
   $$\vec{v}_{t+1} = \vec{v}_t \times 0.98$$
 - **Boundary Collisions**: Disc reverses axis velocity with restitution elasticity (`0.8`):
   $$v_x \leftarrow -v_x \times 0.8$$
+- **Dynamic Arena Light Probes**: 4 dynamic light probes strategically placed across the arena ceiling and goal portals modulate their pulse frequency, intensity, and hue in sync with audio intensity and disc velocity:
+  $$I_{\text{probe}} = I_{\text{base}} + \sin(\omega t) \cdot 1.5 \times (1 + \|\vec{v}_{\text{disc}}\|)$$
 - **Dynamic Pickup Radii**: Interception testing scales based on player status and active `size` power-ups:
   $$\text{dist}^2 < (r_{\text{player}} \cdot \text{scale} + r_{\text{disc}})^2$$
 - **Goal Volumes**: Detected when the disc traverses the boundary plane $|Z| > 30 - r_{\text{disc}}$ within portal aperture $|X| < 5$ and $|Y| < 5$.

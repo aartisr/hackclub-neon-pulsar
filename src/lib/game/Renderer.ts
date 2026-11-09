@@ -315,7 +315,7 @@ export class GameRenderer {
     return { group, core, ring1, ring2, light };
   }
 
-  public update(state: GameState, myId: string) {
+  public update(state: GameState, myId: string, customCameraMode?: 'orbit' | 'disc' | 'player') {
     // Update Particles
     if (this.particles && this.particles.visible) {
       const posAttr = this.particles.geometry.attributes.position as THREE.BufferAttribute;
@@ -472,6 +472,22 @@ export class GameRenderer {
         this.camera.position.lerp(zoomPos, 0.05);
         this.camera.lookAt(this.highlightTarget);
       }
+    } else if (customCameraMode === 'orbit') {
+      const angle = state.time * 0.2;
+      const radius = 38;
+      const camX = Math.sin(angle) * radius;
+      const camZ = Math.cos(angle) * radius;
+      const camY = 14 + Math.sin(angle * 0.5) * 4;
+      this.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.08);
+      this.camera.lookAt(0, 0, 0);
+    } else if (customCameraMode === 'disc') {
+      const targetCamPos = new THREE.Vector3(
+        state.disc.position[0],
+        state.disc.position[1] + 8,
+        state.disc.position[2] + 22
+      );
+      this.camera.position.lerp(targetCamPos, 0.1);
+      this.camera.lookAt(new THREE.Vector3(...state.disc.position));
     } else {
       const localPlayer = state.players[myId];
       if (state.status === 'playing' && localPlayer && !localPlayer.isSpectator) {

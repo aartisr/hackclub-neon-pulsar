@@ -5,6 +5,7 @@ import { PhysicsEngine } from './lib/game/Physics';
 import { AudioManager } from './lib/audio/AudioManager';
 import { useCareerStats } from './hooks/useCareerStats';
 import { useResponsive } from './hooks/useResponsive';
+import { useMatchReplay } from './hooks/useMatchReplay';
 import { AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 
@@ -19,6 +20,7 @@ import { LobbyOverlay } from './components/overlays/LobbyOverlay';
 import { VictoryOverlay } from './components/overlays/VictoryOverlay';
 import { CustomizerModal } from './components/overlays/CustomizerModal';
 import { GameHud } from './components/hud/GameHud';
+import { ReplayHud } from './components/hud/ReplayHud';
 
 export default function App() {
   const [gameState, setGameState] = useState<GameState>(INITIAL_GAME_STATE);
@@ -47,6 +49,44 @@ export default function App() {
   // Responsive device detection
   const { isTouch } = useResponsive();
   const { stats, rankInfo, winRate, addGoal, addGame } = useCareerStats();
+
+  // Match Replay System
+  const {
+    isReplaying,
+    isPlaying: isReplayPlaying,
+    playbackSpeed: replayPlaybackSpeed,
+    currentReplayTime,
+    minReplayTime,
+    maxReplayTime,
+    cameraMode: replayCameraMode,
+    hasReplayData,
+    recordFrame,
+    clearRecording,
+    startReplay,
+    stopReplay,
+    togglePlayPause: toggleReplayPlayPause,
+    setSpeed: setReplaySpeed,
+    setCameraMode: setReplayCameraMode,
+    seekToTime: seekReplayToTime,
+    advanceReplayTime,
+    getSynthesizedGameState,
+  } = useMatchReplay();
+
+  const isReplayingRef = useRef(isReplaying);
+  const currentReplayTimeRef = useRef(currentReplayTime);
+  const replayCameraModeRef = useRef(replayCameraMode);
+
+  useEffect(() => {
+    isReplayingRef.current = isReplaying;
+  }, [isReplaying]);
+
+  useEffect(() => {
+    currentReplayTimeRef.current = currentReplayTime;
+  }, [currentReplayTime]);
+
+  useEffect(() => {
+    replayCameraModeRef.current = replayCameraMode;
+  }, [replayCameraMode]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<GameRenderer | null>(null);
@@ -270,98 +310,111 @@ export default function App() {
     const tick = () => {
       const currentState = stateRef.current;
       
-      if (peerRef.current) {
-        peerRef.current.sendAction({ type: 'MOVE', input: localInputRef.current });
+      if (isReplayingRef.current) {
+        advanceReplayTime(1 / 60);
+        const synthState = getSynthesizedGameState(currentReplayTimeRef.current);
+        if (synthState && rendererRef.current) {
+          rendererRef.current.update(synthState, myId, replayCameraModeRef.current);
+          rendererRef.current.render();
+        }
+      } else {
+        if (currentState.status === 'playing') {
+          recordFrame(currentState);
+        }
 
-        if (isHost && currentState.status === 'playing') {
-          const nextState = PhysicsEngine.update(currentState, inputsRef.current);
-          
-          // Detect score change
-          if (nextState.score.team1 > currentState.score.team1 || nextState.score.team2 > currentState.score.team2) {
-            const scoredTeam1 = nextState.score.team1 > currentState.score.team1;
-            const localPlayer = nextState.players[myId];
-            if (localPlayer) {
-              if ((scoredTeam1 && localPlayer.team === 1) || (!scoredTeam1 && localPlayer.team === 2)) {
-                addGoal();
+        if (peerRef.current) {
+          peerRef.current.sendAction({ type: 'MOVE', input: localInputRef.current });
+
+          if (isHost && currentState.status === 'playing') {
+            const nextState = PhysicsEngine.update(currentState, inputsRef.current);
+            
+            // Detect score change
+            if (nextState.score.team1 > currentState.score.team1 || nextState.score.team2 > currentState.score.team2) {
+              const scoredTeam1 = nextState.score.team1 > currentState.score.team1;
+              const localPlayer = nextState.players[myId];
+              if (localPlayer) {
+                if ((scoredTeam1 && localPlayer.team === 1) || (!scoredTeam1 && localPlayer.team === 2)) {
+                  addGoal();
+                }
               }
             }
-          }
 
-          // Victory condition check
-          if (nextState.score.team1 >= 5 || nextState.score.team2 >= 5) {
-            nextState.status = 'ended';
-            
-            const localPlayer = nextState.players[myId];
-            if (localPlayer) {
-              const team1Won = nextState.score.team1 >= 5;
-              const won = (team1Won && localPlayer.team === 1) || (!team1Won && localPlayer.team === 2);
-              addGame(won);
+            // Victory condition check
+            if (nextState.score.team1 >= 5 || nextState.score.team2 >= 5) {
+              nextState.status = 'ended';
+              
+              const localPlayer = nextState.players[myId];
+              if (localPlayer) {
+                const team1Won = nextState.score.team1 >= 5;
+                const won = (team1Won && localPlayer.team === 1) || (!team1Won && localPlayer.team === 2);
+                addGame(won);
+              }
+
+              confetti({
+                particleCount: 150,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: nextState.score.team1 >= 5 ? ['#06b6d4'] : ['#d946ef']
+              });
             }
 
-            confetti({
-              particleCount: 150,
-              spread: 70,
-              origin: { y: 0.6 },
-              colors: nextState.score.team1 >= 5 ? ['#06b6d4'] : ['#d946ef']
-            });
+            setGameState(nextState);
+            peerRef.current.broadcastState(nextState);
+          }
+        }
+
+        // Detect score change and trigger highlight + haptics + announcement banner
+        if (currentState.score.team1 !== lastScoreRef.current.team1 || currentState.score.team2 !== lastScoreRef.current.team2) {
+          const isTeam1 = currentState.score.team1 > lastScoreRef.current.team1;
+          if (rendererRef.current) {
+            const targetZ = isTeam1 ? -30 : 30; 
+            rendererRef.current.triggerHighlight([0, 0, targetZ], isTeam1 ? 0x00ffff : 0xff00ff);
           }
 
-          setGameState(nextState);
-          peerRef.current.broadcastState(nextState);
-        }
-      }
+          setGoalBanner({
+            team: isTeam1 ? 1 : 2,
+            text: isTeam1 ? 'TEAM CYAN SCORED!' : 'TEAM MAGENTA SCORED!'
+          });
+          setTimeout(() => setGoalBanner(null), 2400);
 
-      // Detect score change and trigger highlight + haptics + announcement banner
-      if (currentState.score.team1 !== lastScoreRef.current.team1 || currentState.score.team2 !== lastScoreRef.current.team2) {
-        const isTeam1 = currentState.score.team1 > lastScoreRef.current.team1;
+          if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+            navigator.vibrate([100, 50, 100]);
+          }
+
+          lastScoreRef.current = { ...currentState.score };
+        }
+
+        // Detect disc wall collision
+        const currentV = currentState.disc.velocity;
+        const lastV = lastVelocityRef.current;
+        const xBounce = Math.sign(currentV[0]) !== Math.sign(lastV[0]) && Math.abs(currentV[0]) > 0.01;
+        const yBounce = Math.sign(currentV[1]) !== Math.sign(lastV[1]) && Math.abs(currentV[1]) > 0.01;
+        const zBounce = Math.sign(currentV[2]) !== Math.sign(lastV[2]) && Math.abs(currentV[2]) > 0.01;
+
+        if (xBounce || yBounce || zBounce) {
+          if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+            navigator.vibrate(20);
+          }
+        }
+        lastVelocityRef.current = [...currentV] as [number, number, number];
+
         if (rendererRef.current) {
-          const targetZ = isTeam1 ? -30 : 30; 
-          rendererRef.current.triggerHighlight([0, 0, targetZ], isTeam1 ? 0x00ffff : 0xff00ff);
+          rendererRef.current.update(currentState, myId);
+          rendererRef.current.render();
         }
 
-        setGoalBanner({
-          team: isTeam1 ? 1 : 2,
-          text: isTeam1 ? 'TEAM CYAN SCORED!' : 'TEAM MAGENTA SCORED!'
-        });
-        setTimeout(() => setGoalBanner(null), 2400);
-
-        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-          navigator.vibrate([100, 50, 100]);
+        if (audioRef.current && audioEnabled) {
+          const v = currentState.disc.velocity;
+          const speed = Math.sqrt(v[0] ** 2 + v[1] ** 2 + v[2] ** 2);
+          audioRef.current.update(speed, currentState.status);
         }
-
-        lastScoreRef.current = { ...currentState.score };
-      }
-
-      // Detect disc wall collision
-      const currentV = currentState.disc.velocity;
-      const lastV = lastVelocityRef.current;
-      const xBounce = Math.sign(currentV[0]) !== Math.sign(lastV[0]) && Math.abs(currentV[0]) > 0.01;
-      const yBounce = Math.sign(currentV[1]) !== Math.sign(lastV[1]) && Math.abs(currentV[1]) > 0.01;
-      const zBounce = Math.sign(currentV[2]) !== Math.sign(lastV[2]) && Math.abs(currentV[2]) > 0.01;
-
-      if (xBounce || yBounce || zBounce) {
-        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-          navigator.vibrate(20);
-        }
-      }
-      lastVelocityRef.current = [...currentV] as [number, number, number];
-
-      if (rendererRef.current) {
-        rendererRef.current.update(currentState, myId);
-        rendererRef.current.render();
-      }
-
-      if (audioRef.current && audioEnabled) {
-        const v = currentState.disc.velocity;
-        const speed = Math.sqrt(v[0] ** 2 + v[1] ** 2 + v[2] ** 2);
-        audioRef.current.update(speed, currentState.status);
       }
 
       frameId = requestAnimationFrame(tick);
     };
     frameId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frameId);
-  }, [isHost, myId, audioEnabled, addGoal, addGame]);
+  }, [isHost, myId, audioEnabled, addGoal, addGame, advanceReplayTime, getSynthesizedGameState, recordFrame]);
 
   // Matchmaking Actions
   const handleHost = async () => {
@@ -414,6 +467,7 @@ export default function App() {
   };
 
   const handleStartGame = () => {
+    clearRecording();
     if (isHost) {
       handleAction({ type: 'START_GAME' }, myId);
     }
@@ -484,10 +538,12 @@ export default function App() {
         )}
 
         {/* 3. Victory Post-Match Screen */}
-        {isJoined && gameState.status === 'ended' && (
+        {isJoined && gameState.status === 'ended' && !isReplaying && (
           <VictoryOverlay
             gameState={gameState}
             isHost={isHost}
+            hasReplay={hasReplayData}
+            onWatchReplay={startReplay}
             onRematch={handleStartGame}
             onLeave={handleLeave}
           />
@@ -511,7 +567,7 @@ export default function App() {
       />
 
       {/* 5. Active Match HUD */}
-      {isJoined && gameState.status === 'playing' && (
+      {isJoined && gameState.status === 'playing' && !isReplaying && (
         <GameHud
           gameState={gameState}
           myId={myId}
@@ -533,6 +589,22 @@ export default function App() {
           onThrow={triggerThrow}
         />
       )}
+
+      {/* 6. 3D Match Replay Control HUD */}
+      <ReplayHud
+        isReplaying={isReplaying}
+        isPlaying={isReplayPlaying}
+        playbackSpeed={replayPlaybackSpeed}
+        currentTime={currentReplayTime}
+        minTime={minReplayTime}
+        maxTime={maxReplayTime}
+        cameraMode={replayCameraMode}
+        onTogglePlayPause={toggleReplayPlayPause}
+        onSetSpeed={setReplaySpeed}
+        onSeekToTime={seekReplayToTime}
+        onSetCameraMode={setReplayCameraMode}
+        onExitReplay={stopReplay}
+      />
     </div>
   );
 }

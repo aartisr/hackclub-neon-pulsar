@@ -52,3 +52,21 @@ export const INITIAL_GAME_STATE: GameState = {
   powerUps: [],
   lightProbes: DEFAULT_LIGHT_PROBES,
 };
+
+export interface ReplayPlayerFrame {
+  id: string;
+  name: string;
+  team: 1 | 2;
+  position: [number, number, number];
+  avatarShape?: ChassisType;
+  customColor?: string;
+}
+
+export interface ReplayFrame {
+  time: number;
+  discPosition: [number, number, number];
+  discVelocity: [number, number, number];
+  players: Record<string, ReplayPlayerFrame>;
+  score: { team1: number; team2: number };
+}
+
