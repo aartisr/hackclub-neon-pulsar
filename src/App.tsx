@@ -10,7 +10,7 @@ import { AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 
 import { 
-  GameState, ChassisType, INITIAL_GAME_STATE 
+  GameState, ChassisType, INITIAL_GAME_STATE, COLOR_PALETTE 
 } from './types/game';
 
 import { CanvasContainer } from './components/game/CanvasContainer';
@@ -417,6 +417,30 @@ export default function App() {
   }, [isHost, myId, audioEnabled, addGoal, addGame, advanceReplayTime, getSynthesizedGameState, recordFrame]);
 
   // Matchmaking Actions
+  const handleQuickMatch = async () => {
+    if (!audioEnabled) await toggleAudio();
+
+    const randomShapes: ChassisType[] = ['capsule', 'cube', 'sphere', 'octa'];
+    const chosenShape = randomShapes[Math.floor(Math.random() * randomShapes.length)];
+    const chosenColor = COLOR_PALETTE[Math.floor(Math.random() * COLOR_PALETTE.length)].hex;
+    const quickCallsign = playerName || `Pilot_${Math.floor(Math.random() * 900 + 100)}`;
+
+    setAvatarShape(chosenShape);
+    setCustomColor(chosenColor);
+    setPlayerName(quickCallsign);
+
+    setIsHost(true);
+    peerRef.current?.host();
+    setIsJoined(true);
+    clearRecording();
+
+    handleAction({ type: 'JOIN', name: quickCallsign, color: chosenColor, shape: chosenShape }, myId);
+
+    setTimeout(() => {
+      handleAction({ type: 'START_GAME' }, myId);
+    }, 150);
+  };
+
   const handleHost = async () => {
     if (!audioEnabled) await toggleAudio();
     setIsHost(true);
@@ -514,6 +538,7 @@ export default function App() {
             careerStats={stats}
             rankInfo={rankInfo}
             winRate={winRate}
+            onQuickMatch={handleQuickMatch}
             onHost={handleHost}
             onJoin={handleJoin}
           />

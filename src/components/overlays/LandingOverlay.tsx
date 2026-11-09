@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   LucideGamepad2, LucideUsers, LucideHelpCircle, 
-  LucideChevronDown, LucideChevronUp, LucideTrophy 
+  LucideChevronDown, LucideChevronUp, LucideTrophy, LucideZap 
 } from 'lucide-react';
 import { CareerStats, RankInfo, getRankInfo } from '../../hooks/useCareerStats';
 import { ChassisType, CHASSIS_TYPES, COLOR_PALETTE } from '../../types/game';
@@ -27,6 +27,7 @@ export interface LandingOverlayProps {
   careerStats: CareerStats;
   rankInfo?: RankInfo;
   winRate?: number;
+  onQuickMatch: () => void;
   onHost: () => void;
   onJoin: () => void;
 }
@@ -43,6 +44,7 @@ export const LandingOverlay: React.FC<LandingOverlayProps> = ({
   careerStats,
   rankInfo,
   winRate = 0,
+  onQuickMatch,
   onHost,
   onJoin,
 }) => {
@@ -231,6 +233,22 @@ export const LandingOverlay: React.FC<LandingOverlayProps> = ({
 
             {/* Matchmaking Actions */}
             <div className="space-y-3">
+              {/* Quick Match Instant Play Button */}
+              <button
+                onClick={onQuickMatch}
+                className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-cyan-400 via-amber-400 to-magenta-500 text-black font-extrabold uppercase tracking-wider flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(6,182,212,0.5)] hover:scale-[1.02] active:scale-95 transition-all text-xs group"
+              >
+                <div className="w-8 h-8 rounded-xl bg-black/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                  <LucideZap size={20} className="fill-black text-black" />
+                </div>
+                <div className="text-left leading-tight">
+                  <div className="font-black text-xs tracking-wider flex items-center gap-2">
+                    QUICK MATCH <span className="text-[9px] bg-black text-cyan-300 font-mono-code px-1.5 py-0.2 rounded font-black">INSTANT PLAY</span>
+                  </div>
+                  <div className="text-[10px] opacity-80 font-bold uppercase">Random Drone Loadout & Instant Arena Launch</div>
+                </div>
+              </button>
+
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={onHost}
