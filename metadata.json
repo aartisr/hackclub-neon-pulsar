@@ -1,0 +1,6 @@
+{
+  "name": "Neon Pulsar: Zero-G Arena",
+  "description": "A high-octane, zero-latency multiplayer 3D disc combat game with hyper-polished neon aesthetics and real-time P2P networking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
