@@ -73,7 +73,8 @@ export class GameRenderer {
     // Particle System
     this.initParticles();
 
-    window.addEventListener('resize', this.onResize.bind(this));
+    this.onResize = this.onResize.bind(this);
+    window.addEventListener('resize', this.onResize);
   }
 
   private initParticles() {
@@ -366,7 +367,7 @@ export class GameRenderer {
       }
     } else {
       const localPlayer = state.players[myId];
-      if (localPlayer && !localPlayer.isSpectator) {
+      if (state.status === 'playing' && localPlayer && !localPlayer.isSpectator) {
         // Normal camera follow for active player
         const targetCamPos = new THREE.Vector3(
           localPlayer.position[0],
@@ -375,7 +376,7 @@ export class GameRenderer {
         );
         this.camera.position.lerp(targetCamPos, 0.1);
         this.camera.lookAt(new THREE.Vector3(...localPlayer.position));
-      } else {
+      } else if (state.status === 'playing') {
         // Spectator or disconnected player: Follow the disc
         const targetCamPos = new THREE.Vector3(
           state.disc.position[0],
@@ -384,6 +385,15 @@ export class GameRenderer {
         );
         this.camera.position.lerp(targetCamPos, 0.05);
         this.camera.lookAt(new THREE.Vector3(...state.disc.position));
+      } else {
+        // Menu / Lobby / Game Over: Gentle cinematic orbit
+        const angle = state.time * 0.15;
+        const radius = 36;
+        const camX = Math.sin(angle) * radius;
+        const camZ = Math.cos(angle) * radius;
+        const camY = 12 + Math.sin(angle * 0.5) * 4;
+        this.camera.position.lerp(new THREE.Vector3(camX, camY, camZ), 0.04);
+        this.camera.lookAt(0, 0, 0);
       }
     }
 

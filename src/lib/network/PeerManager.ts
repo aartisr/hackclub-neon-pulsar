@@ -58,6 +58,7 @@ export type GameAction =
   | { type: 'THROW'; direction: [number, number, number] }
   | { type: 'CHAT'; text: string; teamOnly: boolean }
   | { type: 'CUSTOMIZE'; color: string; shape: 'capsule' | 'cube' | 'sphere' | 'octa' }
+  | { type: 'SWITCH_TEAM'; team: 1 | 2 }
   | { type: 'START_GAME' };
 
 export class PeerManager {
@@ -85,6 +86,14 @@ export class PeerManager {
     this.peer.on('connection', (conn) => {
       this.handleConnection(conn);
     });
+  }
+
+  public onOpen(callback: (id: string) => void) {
+    if (this.myId) {
+      callback(this.myId);
+    } else {
+      this.peer.on('open', callback);
+    }
   }
 
   public host() {

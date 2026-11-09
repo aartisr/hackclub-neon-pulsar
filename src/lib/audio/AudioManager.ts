@@ -209,6 +209,11 @@ export class AudioManager {
     }
   }
 
+  public setMuted(muted: boolean) {
+    if (!this.ctx || !this.masterGain) return;
+    this.masterGain.gain.setTargetAtTime(muted ? 0 : 0.3, this.ctx.currentTime, 0.05);
+  }
+
   public stop() {
     if (this.rhythmInterval) clearTimeout(this.rhythmInterval);
     this.ctx?.close();
