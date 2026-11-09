@@ -46,7 +46,7 @@ export default function App() {
 
   // Responsive device detection
   const { isTouch } = useResponsive();
-  const { stats, addGoal, addGame } = useCareerStats();
+  const { stats, rankInfo, winRate, addGoal, addGame } = useCareerStats();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<GameRenderer | null>(null);
@@ -458,6 +458,8 @@ export default function App() {
             roomCode={roomCode}
             onChangeRoomCode={setRoomCode}
             careerStats={stats}
+            rankInfo={rankInfo}
+            winRate={winRate}
             onHost={handleHost}
             onJoin={handleJoin}
           />

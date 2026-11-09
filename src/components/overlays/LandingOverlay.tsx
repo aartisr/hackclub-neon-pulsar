@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  LucideGamepad2, LucideUsers, LucideTrophy, LucideHelpCircle, 
+  LucideGamepad2, LucideUsers, LucideHelpCircle, 
   LucideChevronDown, LucideChevronUp 
 } from 'lucide-react';
-import { CareerStats } from '../../hooks/useCareerStats';
+import { CareerStats, RankInfo, getRankInfo } from '../../hooks/useCareerStats';
 import { ChassisType, CHASSIS_TYPES, COLOR_PALETTE } from '../../types/game';
+import { RankEmblem } from '../ui/RankEmblem';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -23,6 +24,8 @@ export interface LandingOverlayProps {
   roomCode: string;
   onChangeRoomCode: (code: string) => void;
   careerStats: CareerStats;
+  rankInfo?: RankInfo;
+  winRate?: number;
   onHost: () => void;
   onJoin: () => void;
 }
@@ -37,10 +40,13 @@ export const LandingOverlay: React.FC<LandingOverlayProps> = ({
   roomCode,
   onChangeRoomCode,
   careerStats,
+  rankInfo,
+  winRate = 0,
   onHost,
   onJoin,
 }) => {
   const [howToPlayOpen, setHowToPlayOpen] = useState(false);
+  const rank = rankInfo || getRankInfo(careerStats.victories);
 
   return (
     <motion.div
@@ -66,31 +72,68 @@ export const LandingOverlay: React.FC<LandingOverlayProps> = ({
           </p>
         </div>
 
-        {/* Career Record Bar */}
-        <div className="mb-6 px-4 py-3 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-yellow-500/10 text-yellow-400">
-              <LucideTrophy size={16} />
+        {/* Career Rank & Stats Card */}
+        <div className="mb-6 p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <RankEmblem tier={rank.tier} size="md" />
+              <div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs font-bold text-white uppercase tracking-tight">{rank.title}</span>
+                  <span 
+                    className="text-[9px] font-black px-1.5 py-0.5 rounded font-mono-code uppercase border"
+                    style={{ 
+                      color: rank.primaryColor, 
+                      borderColor: `${rank.primaryColor}50`,
+                      backgroundColor: `${rank.primaryColor}15` 
+                    }}
+                  >
+                    {rank.badgeLabel}
+                  </span>
+                </div>
+                <div className="text-[10px] text-white/50 mt-0.5 font-medium">
+                  {rank.nextTierTitle 
+                    ? `${rank.nextTierWinsRemaining} win${rank.nextTierWinsRemaining === 1 ? '' : 's'} to ${rank.nextTierTitle}` 
+                    : 'Apex Rank Achieved'}
+                </div>
+              </div>
             </div>
-            <div>
-              <div className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Pilot Record</div>
-              <div className="text-xs font-semibold text-white/90">Master Pilot</div>
+
+            <div className="flex gap-3 sm:gap-4 text-xs font-mono-code tabular-nums">
+              <div className="text-right">
+                <div className="text-[9px] text-white/40 uppercase">Goals</div>
+                <div className="font-bold text-cyan-400">{careerStats.goals}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[9px] text-white/40 uppercase">Wins</div>
+                <div className="font-bold text-magenta-400">{careerStats.victories}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-[9px] text-white/40 uppercase">Win %</div>
+                <div className="font-bold text-white/80">{winRate}%</div>
+              </div>
             </div>
           </div>
-          <div className="flex gap-4 sm:gap-5 text-xs font-mono-code tabular-nums">
-            <div className="text-right">
-              <div className="text-[10px] text-white/40 uppercase">Goals</div>
-              <div className="font-bold text-cyan-400">{careerStats.goals}</div>
+
+          {/* Tier Progress Bar */}
+          {rank.nextTierTitle && (
+            <div className="space-y-1 pt-1 border-t border-white/5">
+              <div className="flex justify-between text-[9px] font-mono-code text-white/40 uppercase">
+                <span>Rank Progress</span>
+                <span>{Math.round(rank.progressPercent)}%</span>
+              </div>
+              <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div 
+                  className="h-full transition-all duration-500 rounded-full" 
+                  style={{ 
+                    width: `${rank.progressPercent}%`,
+                    backgroundColor: rank.primaryColor,
+                    boxShadow: `0 0 10px ${rank.primaryColor}` 
+                  }} 
+                />
+              </div>
             </div>
-            <div className="text-right">
-              <div className="text-[10px] text-white/40 uppercase">Wins</div>
-              <div className="font-bold text-magenta-400">{careerStats.victories}</div>
-            </div>
-            <div className="text-right">
-              <div className="text-[10px] text-white/40 uppercase">Games</div>
-              <div className="font-bold text-white/80">{careerStats.gamesPlayed}</div>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Pilot Customization Quick-Bar */}
@@ -105,7 +148,7 @@ export const LandingOverlay: React.FC<LandingOverlayProps> = ({
               onChange={(e) => onChangePlayerName(e.target.value)}
               maxLength={20}
               placeholder="Enter pilot name..."
-              className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-cyan-400/60 focus:bg-white/[0.08] transition-all font-medium"
+              className="w-full bg-white/5 border border-white/15 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-cyan-400/60 focus:bg-white/[0.08] transition-all font-medium text-white"
             />
           </div>
 
@@ -193,7 +236,7 @@ export const LandingOverlay: React.FC<LandingOverlayProps> = ({
                 placeholder="Paste Arena Code or Peer ID..."
                 value={roomCode === 'JOIN_MODE' ? '' : roomCode}
                 onChange={(e) => onChangeRoomCode(e.target.value)}
-                className="w-full bg-white/5 border border-magenta-500/40 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-magenta-400 transition-colors font-mono-code text-center tracking-wider"
+                className="w-full bg-white/5 border border-magenta-500/40 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-magenta-400 transition-colors font-mono-code text-center tracking-wider text-white"
               />
               <button
                 onClick={onJoin}
