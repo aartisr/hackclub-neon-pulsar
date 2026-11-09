@@ -8,6 +8,16 @@ export type GameState = {
   status: 'lobby' | 'playing' | 'ended';
   messages: ChatMessage[];
   powerUps: PowerUpState[];
+  lightProbes?: LightProbeState[];
+};
+
+export type LightProbeState = {
+  id: string;
+  position: [number, number, number];
+  intensity: number;
+  color: string;
+  pulsePhase: number;
+  range: number;
 };
 
 export type PowerUpState = {

@@ -137,6 +137,56 @@ export class PhysicsEngine {
       }
     }
 
+    // Update Dynamic Light Probes (pulsing in sync with audio tempo & match kinetics)
+    if (!nextState.lightProbes || nextState.lightProbes.length === 0) {
+      nextState.lightProbes = [
+        { id: 'probe-cyan-left', position: [-17, 6, -20], intensity: 1.0, color: '#00ffff', pulsePhase: 0, range: 18 },
+        { id: 'probe-cyan-right', position: [17, 6, -20], intensity: 1.0, color: '#00ffff', pulsePhase: Math.PI / 4, range: 18 },
+        { id: 'probe-cyan-goal', position: [0, 8, -28], intensity: 1.2, color: '#06b6d4', pulsePhase: Math.PI / 2, range: 22 },
+        { id: 'probe-center-high', position: [0, 9, 0], intensity: 1.5, color: '#ffffff', pulsePhase: 0, range: 24 },
+        { id: 'probe-center-low', position: [0, -8, 0], intensity: 1.2, color: '#ffffff', pulsePhase: Math.PI, range: 20 },
+        { id: 'probe-magenta-left', position: [-17, 6, 20], intensity: 1.0, color: '#ff00ff', pulsePhase: Math.PI / 4, range: 18 },
+        { id: 'probe-magenta-right', position: [17, 6, 20], intensity: 1.0, color: '#ff00ff', pulsePhase: Math.PI / 2, range: 18 },
+        { id: 'probe-magenta-goal', position: [0, 8, 28], intensity: 1.2, color: '#d946ef', pulsePhase: 0, range: 22 },
+      ];
+    }
+
+    const discVelocity = nextState.disc.velocity;
+    const discSpeed = Math.sqrt(discVelocity[0] ** 2 + discVelocity[1] ** 2 + discVelocity[2] ** 2);
+    
+    // Audio tempo matching 128 BPM synthesizer rhythm (beat ~2.133 Hz)
+    const bpm = 128;
+    const beatFrequency = (bpm / 60) * 2 * Math.PI; // ~13.4 rad/s
+    const audioIntensityFactor = nextState.status === 'playing' 
+      ? 0.5 + Math.min(discSpeed / 1.5, 1.2) * 0.7 
+      : 0.35;
+
+    nextState.lightProbes = nextState.lightProbes.map(probe => {
+      // Harmonic wave oscillation locked to 128 BPM beat
+      const primaryWave = (Math.sin(nextState.time * beatFrequency + probe.pulsePhase) + 1) / 2;
+      // Secondary 16th-note sub-pulse
+      const subWave = (Math.sin(nextState.time * beatFrequency * 4 + probe.pulsePhase * 2) + 1) / 2 * 0.25;
+
+      // Proximity surge when disc traverses near this light probe
+      const distSq = 
+        Math.pow(nextState.disc.position[0] - probe.position[0], 2) +
+        Math.pow(nextState.disc.position[1] - probe.position[1], 2) +
+        Math.pow(nextState.disc.position[2] - probe.position[2], 2);
+      
+      const proximityRange = probe.range || 18;
+      const proximitySurge = distSq < Math.pow(proximityRange, 2)
+        ? (1.0 - Math.sqrt(distSq) / proximityRange) * 1.6
+        : 0;
+
+      // Base rhythmic glow + audio intensity scaling + disc kinetic surge
+      const targetIntensity = (primaryWave * 0.65 + subWave + 0.35) * audioIntensityFactor + proximitySurge;
+
+      return {
+        ...probe,
+        intensity: Math.max(0.2, Math.min(3.5, targetIntensity)),
+      };
+    });
+
     return nextState;
   }
 

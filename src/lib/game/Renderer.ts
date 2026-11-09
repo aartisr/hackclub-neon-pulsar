@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { EffectComposer, RenderPass, UnrealBloomPass, RoomEnvironment } from 'three-stdlib';
-import { GameState, PlayerState } from '../network/PeerManager';
+import { GameState, PlayerState, LightProbeState } from '../network/PeerManager';
 import { ARENA_SIZE, TEAM_COLORS, PLAYER_RADIUS, DISC_RADIUS } from './Constants';
 
 export class GameRenderer {
@@ -10,6 +10,14 @@ export class GameRenderer {
   private composer: EffectComposer;
   private playerMeshes: Map<string, THREE.Group> = new Map();
   private powerUpMeshes: Map<string, THREE.Mesh> = new Map();
+  private probeMeshes: Map<string, {
+    group: THREE.Group;
+    core: THREE.Mesh;
+    ring1: THREE.Mesh;
+    ring2: THREE.Mesh;
+    light: THREE.PointLight;
+  }> = new Map();
+  private probeGroup: THREE.Group;
   private discMesh: THREE.Mesh;
   private arena: THREE.Group;
   private ambientLight: THREE.AmbientLight | null = null;
@@ -65,6 +73,10 @@ export class GameRenderer {
     // Arena
     this.arena = this.createArena();
     this.scene.add(this.arena);
+
+    // Dynamic Light Probes Group
+    this.probeGroup = new THREE.Group();
+    this.scene.add(this.probeGroup);
 
     // Disc
     this.discMesh = this.createDisc();
@@ -252,6 +264,57 @@ export class GameRenderer {
     return new THREE.Mesh(geom, mat);
   }
 
+  private createLightProbeMesh(probe: LightProbeState): {
+    group: THREE.Group;
+    core: THREE.Mesh;
+    ring1: THREE.Mesh;
+    ring2: THREE.Mesh;
+    light: THREE.PointLight;
+  } {
+    const group = new THREE.Group();
+    const probeColor = new THREE.Color(probe.color);
+
+    // Glowing crystalline core
+    const coreGeom = new THREE.OctahedronGeometry(0.65, 0);
+    const coreMat = new THREE.MeshStandardMaterial({
+      color: probeColor,
+      emissive: probeColor,
+      emissiveIntensity: probe.intensity * 1.5,
+      roughness: 0.15,
+      metalness: 0.85,
+    });
+    const core = new THREE.Mesh(coreGeom, coreMat);
+    group.add(core);
+
+    // Outer kinetic gyro ring 1
+    const ring1Geom = new THREE.TorusGeometry(1.15, 0.035, 8, 32);
+    const ring1Mat = new THREE.MeshBasicMaterial({
+      color: probeColor,
+      transparent: true,
+      opacity: 0.75,
+    });
+    const ring1 = new THREE.Mesh(ring1Geom, ring1Mat);
+    group.add(ring1);
+
+    // Outer kinetic gyro ring 2 (angled)
+    const ring2Geom = new THREE.TorusGeometry(1.4, 0.025, 8, 32);
+    const ring2Mat = new THREE.MeshBasicMaterial({
+      color: probeColor,
+      transparent: true,
+      opacity: 0.5,
+    });
+    const ring2 = new THREE.Mesh(ring2Geom, ring2Mat);
+    ring2.rotation.x = Math.PI / 3;
+    group.add(ring2);
+
+    // Real-time PointLight casting dynamic glow across arena boundaries
+    const light = new THREE.PointLight(probeColor, probe.intensity * 2.2, probe.range || 20, 2);
+    group.add(light);
+
+    group.position.set(...probe.position);
+    return { group, core, ring1, ring2, light };
+  }
+
   public update(state: GameState, myId: string) {
     // Update Particles
     if (this.particles && this.particles.visible) {
@@ -356,6 +419,50 @@ export class GameRenderer {
       }
     });
 
+    // Update Dynamic Light Probes (pulsing in sync with audio tempo & match kinetics)
+    const probes = state.lightProbes || [];
+    probes.forEach(probe => {
+      let probeObj = this.probeMeshes.get(probe.id);
+      if (!probeObj) {
+        probeObj = this.createLightProbeMesh(probe);
+        this.probeGroup.add(probeObj.group);
+        this.probeMeshes.set(probe.id, probeObj);
+      }
+
+      // Smoothly ramp point light intensity in sync with audio beat & proximity surge
+      const targetLightIntensity = probe.intensity * 2.2;
+      probeObj.light.intensity = THREE.MathUtils.damp(probeObj.light.intensity, targetLightIntensity, 8, 0.016);
+
+      // Emissive core pulsing
+      const coreMat = probeObj.core.material as THREE.MeshStandardMaterial;
+      coreMat.emissiveIntensity = THREE.MathUtils.damp(coreMat.emissiveIntensity, probe.intensity * 1.8, 8, 0.016);
+
+      // Kinetic gyro ring rotations (spinning in sync with probe intensity)
+      const speedFactor = 1.0 + Math.min(probe.intensity, 3.0) * 0.6;
+      probeObj.ring1.rotation.x += 0.02 * speedFactor;
+      probeObj.ring1.rotation.y += 0.025 * speedFactor;
+      probeObj.ring2.rotation.y -= 0.02 * speedFactor;
+      probeObj.ring2.rotation.z += 0.015 * speedFactor;
+
+      // Subtle breathing scale on the crystalline core
+      const pulseScale = 1.0 + Math.sin(state.time * 6 + probe.pulsePhase) * 0.12 * Math.min(probe.intensity, 2.0);
+      probeObj.core.scale.setScalar(pulseScale);
+    });
+
+    // Remove obsolete light probes
+    this.probeMeshes.forEach((probeObj, id) => {
+      if (!probes.find(p => p.id === id)) {
+        this.probeGroup.remove(probeObj.group);
+        probeObj.core.geometry.dispose();
+        (probeObj.core.material as THREE.Material).dispose();
+        probeObj.ring1.geometry.dispose();
+        (probeObj.ring1.material as THREE.Material).dispose();
+        probeObj.ring2.geometry.dispose();
+        (probeObj.ring2.material as THREE.Material).dispose();
+        this.probeMeshes.delete(id);
+      }
+    });
+
     // Camera handling
     if (this.highlightTimer > 0) {
       this.highlightTimer -= 0.016; // Approx 60fps
@@ -444,6 +551,16 @@ export class GameRenderer {
   }
 
   public dispose() {
+    this.probeMeshes.forEach(probeObj => {
+      this.probeGroup.remove(probeObj.group);
+      probeObj.core.geometry.dispose();
+      (probeObj.core.material as THREE.Material).dispose();
+      probeObj.ring1.geometry.dispose();
+      (probeObj.ring1.material as THREE.Material).dispose();
+      probeObj.ring2.geometry.dispose();
+      (probeObj.ring2.material as THREE.Material).dispose();
+    });
+    this.probeMeshes.clear();
     this.renderer.dispose();
     window.removeEventListener('resize', this.onResize);
   }
