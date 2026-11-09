@@ -273,27 +273,50 @@ Located in `src/lib/audio/AudioManager.ts`:
 ## Project Structure
 
 ```
-├── .env.example              # Environment variable definitions
-├── index.html                # HTML entry point & viewport meta
-├── metadata.json             # AI Studio applet metadata & capabilities
-├── package.json              # Project dependencies & build scripts
-├── tsconfig.json             # TypeScript configuration
-├── vite.config.ts            # Vite configuration with React & Tailwind plugins
+├── .env.example                  # Environment variable definitions
+├── index.html                    # HTML entry point with Orbitron & Plus Jakarta Sans
+├── metadata.json                 # AI Studio applet metadata & capabilities
+├── package.json                  # Project dependencies & build scripts
+├── tsconfig.json                 # TypeScript configuration
+├── vite.config.ts                # Vite configuration with React & Tailwind plugins
 └── src/
-    ├── main.tsx              # React DOM bootstrap
-    ├── index.css             # Tailwind v4 theme definitions
-    ├── App.tsx               # Main application controller, HUD, & UI overlays
+    ├── main.tsx                  # React DOM bootstrap
+    ├── index.css                 # Tailwind v4 theme & font definitions
+    ├── App.tsx                   # Modular composition root & game coordinator
+    ├── types/
+    │   └── game.ts               # Centralized game types, actions, & chassis presets
     ├── hooks/
-    │   └── useCareerStats.ts # LocalStorage persistent career stats hook
+    │   ├── useCareerStats.ts     # LocalStorage persistent career stats hook
+    │   └── useResponsive.ts      # Multi-device breakpoint & touch detection hook
+    ├── components/
+    │   ├── ui/
+    │   │   └── SoundToggle.tsx   # Reusable procedural audio toggle button
+    │   ├── game/
+    │   │   └── CanvasContainer.tsx # WebGL canvas container with graceful fallback
+    │   ├── overlays/
+    │   │   ├── LandingOverlay.tsx  # Matchmaking, callsign, & quick chassis selector
+    │   │   ├── LobbyOverlay.tsx    # Team Cyan & Magenta rosters & launch combat
+    │   │   ├── VictoryOverlay.tsx  # Match summary, winner fanfare, & rematch
+    │   │   └── CustomizerModal.tsx # Full chassis & energy wavelength editor
+    │   └── hud/
+    │       ├── GameHud.tsx       # Root container orchestrating all match HUD modules
+    │       ├── Scoreboard.tsx    # Floating team scores, clock, & exit match
+    │       ├── GoalBanner.tsx    # Animated celebratory goal announcement
+    │       ├── RadarMap.tsx      # Top-down 2D radar projection of players & disc
+    │       ├── Speedometer.tsx   # Dynamic vertical velocity gauge
+    │       ├── ControlsGuide.tsx # Collapsible keyboard controls helper ([H])
+    │       ├── TouchControls.tsx # Mobile/tablet virtual D-Pad, altitude & throw
+    │       ├── ChatOverlay.tsx   # In-game chat toasts & team/global input
+    │       └── SpectatorBadge.tsx # Real-time spectator status indicator
     └── lib/
         ├── audio/
-        │   └── AudioManager.ts # Web Audio API procedural synthesizer
+        │   └── AudioManager.ts   # Web Audio API procedural synthesizer
         ├── game/
-        │   ├── Constants.ts    # Dimensions, physics coefficients, colors
-        │   ├── Physics.ts      # Zero-G collision & simulation engine
-        │   └── Renderer.ts     # Three.js scene, camera, lights, bloom passes
+        │   ├── Constants.ts      # Arena bounds, speeds, & physics constants
+        │   ├── Physics.ts        # Zero-G kinematic simulation & collisions
+        │   └── Renderer.ts       # Three.js scene, dynamic lighting, & post-processing
         └── network/
-            └── PeerManager.ts  # WebRTC PeerJS DataChannel manager
+            └── PeerManager.ts    # WebRTC PeerJS DataChannel manager
 ```
 
 ---
