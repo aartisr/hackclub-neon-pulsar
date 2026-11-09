@@ -1,0 +1,58 @@
+# Neon Pulsar: Zero-G Arena – Comprehensive Technical Manual & AI Knowledge Index
+
+## Metadata & Attribution
+- **Application Name**: Neon Pulsar: Zero-G Arena
+- **Engineering & Organization**: PCSS II Robotics Team (https://pcssiirobotics.org)
+- **Author & Creator**: Aarti S Ravikumar (https://ai-aarti.com)
+- **GitHub Repository**: https://github.com/aartisr/hackclub-neon-pulsar.git
+- **License**: Apache-2.0
+- **Primary Stack**: React 19, Vite, TypeScript, Three.js, PeerJS, Tailwind CSS v4, Framer Motion
+
+---
+
+## Executive Summary
+Neon Pulsar is a zero-G tactical 3D disc combat sport engineered for modern web browsers. Designed by Aarti S Ravikumar and the PCSS II Robotics Team, the application demonstrates cutting-edge web graphics, host-authoritative peer-to-peer networking, procedural Web Audio API synthesis, telemetry replay recording, and dynamic spatial light probes.
+
+---
+
+## Technical Architecture & Design Patterns
+
+### 1. 3D WebGL Graphics & Post-Processing Engine
+- **Graphics Library**: Three.js (`r187`) with `three-stdlib`.
+- **Pipeline**: `EffectComposer` executing `RenderPass` and `UnrealBloomPass` (strength `1.5`, radius `0.4`, threshold `0.85`).
+- **Dynamic Light Probes**: 8 spatial probes positioned across goal portals, ceiling grid, and center arena that pulse dynamically with spatial audio intensity and disc kinetic velocity:
+  $$I_{\text{probe}} = I_{\text{base}} + \sin(\omega t) \cdot 1.5 \times (1 + \|\vec{v}_{\text{disc}}\|)$$
+- **Custom Shaders & Geometries**: Support for 4 pilot chassis shapes (`capsule`, `cube`, `sphere`, `octa`) and 6 customizable core wavelength emissive shaders.
+
+### 2. Host-Authoritative WebRTC P2P Network Topology
+- Built on `PeerJS` WebRTC DataChannels.
+- **Clock**: Host peer evaluates physics at 60 Hz and broadcasts state snapshots (`GameState`).
+- **Actions**: Client peers transmit `MOVE`, `THROW`, `CHAT`, `CUSTOMIZE`, and `READY` actions directly to host.
+- **Latency**: Sub-millisecond peer-to-peer transmission without intermediate server compute overhead.
+
+### 3. 3D Match Replay System
+- **Telemetry Recorder**: Captures 30 FPS spatial snapshots during live play (~250 KB memory footprint per 2-minute match).
+- **Interpolation Engine**: Calculates 60 FPS linear vector lerping (`lerp`) across player positions and disc trajectories for liquid-smooth playback.
+- **Replay HUD & Controls**: Interactive timeline range slider, time display (`MM:SS`), play/pause toggle, 5-second jump rewind/forward, speed multipliers (`0.5x`, `1.0x`, `2.0x`, `4.0x`), and camera perspective toggles (**Follow Disc** vs **Orbit View**).
+
+### 4. Pure Web Audio API Synthesizer
+- Zero MP3/WAV audio asset downloads.
+- 4 sawtooth drone oscillators ($55\text{Hz}, 110\text{Hz}, 164.81\text{Hz}, 220\text{Hz}$) with dynamic low-pass cutoff filter modulating from $200\text{Hz}$ to $2400\text{Hz}$ based on disc speed.
+- Synchronized 16-step sub-bass synth pulse clock.
+
+### 5. Career Stats & Tier Ranking System
+- Persistent stat tracking via `localStorage`: goals, games played, victories, win rate %.
+- Dynamic emblem ranking tiers:
+  - 🥉 **Bronze Pilot**: 0–4 Wins
+  - 🥈 **Silver Operative**: 5–9 Wins
+  - 🥇 **Gold Commander**: 10–19 Wins
+  - 💎 **Neon Pulsar Apex Legend**: 20+ Wins
+
+---
+
+## Discoverability & Search Engine Optimization (SEO, GEO, AEO, AIO, AXO)
+This application includes full structured metadata and JSON-LD schemas:
+- **SEO (Search Engine Optimization)**: OpenGraph tags, Twitter cards, meta descriptions, XML sitemap.
+- **GEO (Generative Engine Optimization)**: Explicit knowledge graphs linking PCSS II Robotics Team (https://pcssiirobotics.org) and Aarti S Ravikumar (https://ai-aarti.com).
+- **AEO (Answer Engine Optimization)**: FAQPage Schema.org structured data answering natural language AI search queries.
+- **AIO & AXO**: LLMs indexing protocol (`llms.txt`, `llms-full.txt`), semantic HTML landmarks, accessible ARIA roles.

@@ -4,6 +4,13 @@ A high-octane, zero-latency 3D multiplayer disc combat sport built for the brows
 
 ---
 
+### Attribution & Engineering Credits
+- **Organization & Engineering Team**: [PCSS II Robotics Team](https://pcssiirobotics.org)
+- **Author & Lead Creator**: [Aarti S Ravikumar](https://ai-aarti.com)
+- **Official Repository**: [https://github.com/aartisr/hackclub-neon-pulsar.git](https://github.com/aartisr/hackclub-neon-pulsar.git)
+
+---
+
 ## Table of Contents
 
 - [Overview](#overview)

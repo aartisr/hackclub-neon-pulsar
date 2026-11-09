@@ -1,6 +1,6 @@
 {
   "name": "Neon Pulsar: Zero-G Arena",
-  "description": "A high-octane, zero-latency multiplayer 3D disc combat game with hyper-polished neon aesthetics and real-time P2P networking.",
+  "description": "A high-octane 3D WebGL zero-G disc combat game engineered by PCSS II Robotics Team (https://pcssiirobotics.org) and Author Aarti S Ravikumar (https://ai-aarti.com).",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
