@@ -1,11 +1,6 @@
+import { cn } from '../../lib/ui/cn';
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 export interface GoalBannerProps {
   banner: { text: string; team: 1 | 2 } | null;
@@ -20,7 +15,7 @@ export const GoalBanner: React.FC<GoalBannerProps> = ({ banner }) => {
           initial={{ opacity: 0, y: -30, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -20, scale: 0.95 }}
-          className="absolute top-24 left-1/2 -translate-x-1/2 pointer-events-none z-30"
+          className="absolute top-36 sm:top-24 left-1/2 -translate-x-1/2 pointer-events-none z-30"
         >
           <div className={cn(
             "px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl border font-display text-lg sm:text-2xl font-black tracking-widest uppercase italic shadow-2xl backdrop-blur-xl",

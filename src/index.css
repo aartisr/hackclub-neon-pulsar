@@ -5,7 +5,43 @@
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     user-select: none;
     -webkit-user-select: none;
+    margin: 0;
   }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+  input, textarea { user-select: text; -webkit-user-select: text; }
+}
+
+.safe-screen {
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  padding-left: max(1rem, env(safe-area-inset-left));
+}
+
+.premium-panel {
+  border: 1px solid rgba(165, 226, 255, 0.2);
+  background: linear-gradient(145deg, rgba(15, 26, 47, 0.94), rgba(5, 10, 23, 0.96) 58%, rgba(25, 12, 43, 0.94));
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.58), inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 48px rgba(26, 188, 220, 0.09);
+  backdrop-filter: blur(28px);
+}
+
+.ambient-glow {
+  background: radial-gradient(ellipse at 15% 20%, rgba(16, 161, 206, 0.14), transparent 36%), radial-gradient(ellipse at 85% 80%, rgba(155, 76, 235, 0.13), transparent 42%);
+}
+
+button:focus-visible, input:focus-visible {
+  outline: 2px solid #67e8f9;
+  outline-offset: 2px;
+}
+
+@media (min-width: 640px) {
+  .safe-screen { padding: max(1.5rem, env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right)) max(1.5rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left)); }
+}
+
+@media (max-height: 480px) and (orientation: landscape) {
+  .mobile-speedometer { display: none; }
+  .touch-controls { gap: 0.25rem; }
 }
 
 .font-display {

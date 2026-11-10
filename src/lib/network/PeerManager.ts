@@ -1,90 +1,25 @@
 import Peer, { DataConnection } from 'peerjs';
-
-export type GameState = {
-  players: Record<string, PlayerState>;
-  disc: DiscState;
-  score: { team1: number; team2: number };
-  time: number;
-  status: 'lobby' | 'playing' | 'ended';
-  messages: ChatMessage[];
-  powerUps: PowerUpState[];
-  lightProbes?: LightProbeState[];
-};
-
-export type LightProbeState = {
-  id: string;
-  position: [number, number, number];
-  intensity: number;
-  color: string;
-  pulsePhase: number;
-  range: number;
-};
-
-export type PowerUpState = {
-  id: string;
-  type: 'speed' | 'size' | 'shield';
-  position: [number, number, number];
-  active: boolean;
-};
-
-export type PlayerEffect = {
-  type: 'speed' | 'size' | 'shield';
-  endTime: number;
-};
-
-export type ChatMessage = {
-  id: string;
-  senderId: string;
-  senderName: string;
-  text: string;
-  team: 1 | 2;
-  teamOnly: boolean;
-  timestamp: number;
-};
-
-export type PlayerState = {
-  id: string;
-  name: string;
-  position: [number, number, number];
-  rotation: [number, number, number];
-  team: 1 | 2;
-  ready: boolean;
-  isSpectator: boolean;
-  effects: PlayerEffect[];
-  customColor?: string;
-  avatarShape?: 'capsule' | 'cube' | 'sphere' | 'octa';
-};
-
-export type DiscState = {
-  position: [number, number, number];
-  velocity: [number, number, number];
-  ownerId: string | null;
-};
-
-export type GameAction = 
-  | { type: 'JOIN'; name: string; color?: string; shape?: 'capsule' | 'cube' | 'sphere' | 'octa' }
-  | { type: 'READY'; ready: boolean }
-  | { type: 'MOVE'; input: { x: number; y: number; z: number; jump: boolean; dash: boolean } }
-  | { type: 'THROW'; direction: [number, number, number] }
-  | { type: 'CHAT'; text: string; teamOnly: boolean }
-  | { type: 'CUSTOMIZE'; color: string; shape: 'capsule' | 'cube' | 'sphere' | 'octa' }
-  | { type: 'SWITCH_TEAM'; team: 1 | 2 }
-  | { type: 'START_GAME' };
+import type { GameAction, GameState } from '../../types/game';
+import { isGameState, parseClientAction, stateForPeer } from './protocol';
 
 export class PeerManager {
   private peer: Peer;
   private connections: Map<string, DataConnection> = new Map();
   private onStateUpdate: (state: GameState) => void;
   private onAction: (action: GameAction, peerId: string) => void;
+  private onConnectionLost?: () => void;
+  private disposed = false;
   public isHost: boolean = false;
   public myId: string = '';
 
   constructor(
     onStateUpdate: (state: GameState) => void,
-    onAction: (action: GameAction, peerId: string) => void
+    onAction: (action: GameAction, peerId: string) => void,
+    onConnectionLost?: () => void
   ) {
     this.onStateUpdate = onStateUpdate;
     this.onAction = onAction;
+    this.onConnectionLost = onConnectionLost;
     // Generate a clean ID or let PeerJS generate one
     this.peer = new Peer();
     
@@ -94,7 +29,8 @@ export class PeerManager {
     });
 
     this.peer.on('connection', (conn) => {
-      this.handleConnection(conn);
+      if (this.isHost) this.handleConnection(conn);
+      else conn.close();
     });
   }
 
@@ -106,13 +42,73 @@ export class PeerManager {
     }
   }
 
+  public ready(): Promise<string> {
+    if (this.disposed) return Promise.reject(new Error('Network connection was closed. Try again.'));
+    if (this.myId) return Promise.resolve(this.myId);
+    return new Promise((resolve, reject) => {
+      const timeout = window.setTimeout(() => finish(new Error('Signaling server did not respond. Check your connection and try again.')), 10000);
+      const onOpen = (id: string) => finish(undefined, id);
+      const onError = (error: Error) => finish(error);
+      const finish = (error?: Error, id?: string) => {
+        window.clearTimeout(timeout);
+        this.peer.off('open', onOpen);
+        this.peer.off('error', onError);
+        if (error) reject(error);
+        else resolve(id || this.myId);
+      };
+      this.peer.on('open', onOpen);
+      this.peer.on('error', onError);
+    });
+  }
+
   public host() {
     this.isHost = true;
   }
 
-  public join(hostId: string) {
-    const conn = this.peer.connect(hostId);
-    this.handleConnection(conn);
+  public join(hostId: string, joinAction: GameAction): Promise<void> {
+    if (this.disposed) return Promise.reject(new Error('Network connection was closed. Try again.'));
+    return new Promise((resolve, reject) => {
+      const conn = this.peer.connect(hostId);
+      this.handleConnection(conn);
+
+      let settled = false;
+      const timeout = window.setTimeout(() => finish(new Error('Connection timed out. Check the room code and try again.')), 15000);
+      const onPeerError = (error: Error) => finish(error);
+      const onClose = () => finish(new Error('Connection closed before joining the arena.'));
+      const onOpen = () => {
+        try {
+          conn.send(joinAction);
+        } catch (error) {
+          finish(error instanceof Error ? error : new Error('Could not send join request.'));
+        }
+      };
+      const onData = (data: unknown) => {
+        if (isGameState(data) && Object.hasOwn(data.players, this.myId)) finish();
+      };
+      const finish = (error?: Error) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeout);
+        this.peer.off('error', onPeerError);
+        conn.off('error', onPeerError);
+        conn.off('close', onClose);
+        conn.off('open', onOpen);
+        conn.off('data', onData);
+        if (error) {
+          this.connections.delete(conn.peer);
+          conn.close();
+          reject(error);
+        } else {
+          resolve();
+        }
+      };
+
+      this.peer.on('error', onPeerError);
+      conn.on('error', onPeerError);
+      conn.on('close', onClose);
+      conn.on('open', onOpen);
+      conn.on('data', onData);
+    });
   }
 
   private handleConnection(conn: DataConnection) {
@@ -121,16 +117,21 @@ export class PeerManager {
       console.log('Connected to: ' + conn.peer);
     });
 
-    conn.on('data', (data: any) => {
+    conn.on('data', (data: unknown) => {
       if (this.isHost) {
-        this.onAction(data as GameAction, conn.peer);
-      } else {
-        this.onStateUpdate(data as GameState);
+        const action = parseClientAction(data);
+        if (action) this.onAction(action, conn.peer);
+      } else if (isGameState(data)) {
+        this.onStateUpdate(data);
       }
     });
 
     conn.on('close', () => {
-      this.connections.delete(conn.peer);
+      const wasOpen = this.connections.delete(conn.peer);
+      if (!this.disposed && wasOpen) {
+        if (this.isHost) this.onAction({ type: 'LEAVE' }, conn.peer);
+        else this.onConnectionLost?.();
+      }
       console.log('Connection closed: ' + conn.peer);
     });
   }
@@ -138,7 +139,8 @@ export class PeerManager {
   public broadcastState(state: GameState) {
     if (!this.isHost) return;
     this.connections.forEach((conn) => {
-      conn.send(state);
+      if (!conn.open) return;
+        try { conn.send(stateForPeer(state, conn.peer)); } catch { conn.close(); }
     });
   }
 
@@ -147,12 +149,15 @@ export class PeerManager {
       this.onAction(action, this.myId);
     } else {
       this.connections.forEach((conn) => {
-        conn.send(action);
+        if (!conn.open) return;
+        try { conn.send(action); } catch { conn.close(); }
       });
     }
   }
 
   public disconnect() {
+    this.disposed = true;
     this.peer.destroy();
+    this.connections.clear();
   }
 }

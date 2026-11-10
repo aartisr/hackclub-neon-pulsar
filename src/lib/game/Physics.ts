@@ -1,14 +1,16 @@
 import { ARENA_SIZE, PHYSICS, PLAYER_RADIUS, DISC_RADIUS } from './Constants';
-import { GameState, PlayerState, DiscState } from '../network/PeerManager';
+import { GameState, MoveInput, DEFAULT_LIGHT_PROBES } from '../../types/game';
+import { cloneGameState } from './state';
 
 export class PhysicsEngine {
-  public static update(state: GameState, inputs: Record<string, any>): GameState {
-    const nextState = { ...state };
+  public static update(state: GameState, inputs: Record<string, MoveInput>): GameState {
+    const nextState = cloneGameState(state);
     nextState.time += 1 / 60;
     
     // Update players
     for (const id in nextState.players) {
       const player = nextState.players[id];
+      if (player.isSpectator) continue;
       const input = inputs[id] || { x: 0, y: 0, z: 0, jump: false, dash: false };
 
       // Apply Power-up Effects to physics
@@ -120,6 +122,7 @@ export class PhysicsEngine {
       // Player-Disc pickup collision
       for (const id in nextState.players) {
         const player = nextState.players[id];
+        if (player.isSpectator) continue;
         // Calculate dynamic radius for collision
         let radiusMult = 1.0;
         player.effects.forEach(e => { if (e.type === 'size') radiusMult = 1.6; });
@@ -138,17 +141,8 @@ export class PhysicsEngine {
     }
 
     // Update Dynamic Light Probes (pulsing in sync with audio tempo & match kinetics)
-    if (!nextState.lightProbes || nextState.lightProbes.length === 0) {
-      nextState.lightProbes = [
-        { id: 'probe-cyan-left', position: [-17, 6, -20], intensity: 1.0, color: '#00ffff', pulsePhase: 0, range: 18 },
-        { id: 'probe-cyan-right', position: [17, 6, -20], intensity: 1.0, color: '#00ffff', pulsePhase: Math.PI / 4, range: 18 },
-        { id: 'probe-cyan-goal', position: [0, 8, -28], intensity: 1.2, color: '#06b6d4', pulsePhase: Math.PI / 2, range: 22 },
-        { id: 'probe-center-high', position: [0, 9, 0], intensity: 1.5, color: '#ffffff', pulsePhase: 0, range: 24 },
-        { id: 'probe-center-low', position: [0, -8, 0], intensity: 1.2, color: '#ffffff', pulsePhase: Math.PI, range: 20 },
-        { id: 'probe-magenta-left', position: [-17, 6, 20], intensity: 1.0, color: '#ff00ff', pulsePhase: Math.PI / 4, range: 18 },
-        { id: 'probe-magenta-right', position: [17, 6, 20], intensity: 1.0, color: '#ff00ff', pulsePhase: Math.PI / 2, range: 18 },
-        { id: 'probe-magenta-goal', position: [0, 8, 28], intensity: 1.2, color: '#d946ef', pulsePhase: 0, range: 22 },
-      ];
+    if (!nextState.lightProbes?.length) {
+      nextState.lightProbes = DEFAULT_LIGHT_PROBES.map(probe => ({ ...probe, position: [...probe.position] }));
     }
 
     const discVelocity = nextState.disc.velocity;

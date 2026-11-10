@@ -1,13 +1,9 @@
+import { cn } from '../../lib/ui/cn';
 import React from 'react';
 import { motion } from 'framer-motion';
 import { LucideFilm } from 'lucide-react';
 import { GameState } from '../../types/game';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { SiteAttribution } from '../ui/SiteAttribution';
 
 export interface VictoryOverlayProps {
   gameState: GameState;
@@ -34,12 +30,12 @@ export const VictoryOverlay: React.FC<VictoryOverlayProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl overflow-y-auto"
+      className="safe-screen absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl overflow-y-auto overscroll-contain"
     >
-      <div className="text-center max-w-md w-full my-auto">
+      <div className="premium-panel text-center max-w-md w-full my-auto rounded-3xl p-5 sm:p-8">
         <h2 className={cn(
           "font-display text-4xl sm:text-6xl font-black italic uppercase tracking-tighter mb-2",
-          isTeam1Winner ? "text-cyan-400 shadow-[0_0_40px_rgba(6,182,212,0.6)]" : "text-magenta-400 shadow-[0_0_40px_rgba(217,70,239,0.6)]"
+          isTeam1Winner ? "text-cyan-300 drop-shadow-[0_0_24px_rgba(6,182,212,0.5)]" : "text-fuchsia-300 drop-shadow-[0_0_24px_rgba(217,70,239,0.5)]"
         )}>
           {isTeam1Winner ? "Cyan Victory" : "Magenta Victory"}
         </h2>
@@ -93,31 +89,7 @@ export const VictoryOverlay: React.FC<VictoryOverlayProps> = ({
           </button>
         </div>
 
-        {/* Site & Engineering Attribution Footer */}
-        <div className="mt-6 pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] font-mono-code text-white/40">
-          <div>
-            Engineered by{' '}
-            <a
-              href="https://pcssiirobotics.org"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-bold text-cyan-400 hover:text-cyan-300 underline underline-offset-2 transition-colors"
-            >
-              PCSS II Robotics Team
-            </a>
-          </div>
-          <div>
-            Author:{' '}
-            <a
-              href="https://ai-aarti.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-bold text-magenta-400 hover:text-magenta-300 underline underline-offset-2 transition-colors"
-            >
-              Aarti S Ravikumar
-            </a>
-          </div>
-        </div>
+        <SiteAttribution className="mt-6 text-[10px] text-white/40" />
       </div>
     </motion.div>
   );

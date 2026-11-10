@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { EffectComposer, RenderPass, UnrealBloomPass, RoomEnvironment } from 'three-stdlib';
-import { GameState, PlayerState, LightProbeState } from '../network/PeerManager';
-import { ARENA_SIZE, TEAM_COLORS, PLAYER_RADIUS, DISC_RADIUS } from './Constants';
+import { GameState } from '../../types/game';
+import { createArena, createDisc, createPlayerMesh, createPowerUpMesh, createLightProbeMesh, disposeObject3D } from './SceneObjects';
+import { TEAM_COLORS } from './Constants';
 
 export class GameRenderer {
   private scene: THREE.Scene;
@@ -28,6 +29,7 @@ export class GameRenderer {
   private highlightTimer = 0;
   private highlightTarget: THREE.Vector3 | null = null;
   private particles: THREE.Points | null = null;
+  private scratchVector = new THREE.Vector3();
   private particleVelocity: Float32Array | null = null;
 
   constructor(container: HTMLDivElement) {
@@ -48,7 +50,9 @@ export class GameRenderer {
 
     // Environment
     const pmremGenerator = new THREE.PMREMGenerator(this.renderer);
-    this.scene.environment = pmremGenerator.fromScene(new (RoomEnvironment as any)(), 0.04).texture;
+    const roomEnvironment = new (RoomEnvironment as unknown as new () => THREE.Scene)();
+    this.scene.environment = pmremGenerator.fromScene(roomEnvironment, 0.04).texture;
+    disposeObject3D(roomEnvironment);
     pmremGenerator.dispose();
 
     // Post Processing (Bloom)
@@ -71,7 +75,7 @@ export class GameRenderer {
     this.scene.add(this.mainLight);
 
     // Arena
-    this.arena = this.createArena();
+    this.arena = createArena();
     this.scene.add(this.arena);
 
     // Dynamic Light Probes Group
@@ -79,7 +83,7 @@ export class GameRenderer {
     this.scene.add(this.probeGroup);
 
     // Disc
-    this.discMesh = this.createDisc();
+    this.discMesh = createDisc();
     this.scene.add(this.discMesh);
 
     // Particle System
@@ -139,183 +143,7 @@ export class GameRenderer {
     }
   }
 
-  private createArena(): THREE.Group {
-    const group = new THREE.Group();
-    
-    // Grid floor
-    const gridHelper = new THREE.GridHelper(100, 20, 0x444444, 0x222222);
-    gridHelper.position.y = -ARENA_SIZE.height / 2;
-    group.add(gridHelper);
-
-    // Walls (Neon Wireframe)
-    const boxGeom = new THREE.BoxGeometry(ARENA_SIZE.width, ARENA_SIZE.height, ARENA_SIZE.depth);
-    const edges = new THREE.EdgesGeometry(boxGeom);
-    const lineMat = new THREE.LineBasicMaterial({ color: 0x333333 });
-    const wireframe = new THREE.LineSegments(edges, lineMat);
-    group.add(wireframe);
-
-    // Goals
-    const goalGeom = new THREE.PlaneGeometry(10, 10);
-    const goal1Mat = new THREE.MeshBasicMaterial({ color: TEAM_COLORS.team1, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
-    const goal1 = new THREE.Mesh(goalGeom, goal1Mat);
-    goal1.position.z = -ARENA_SIZE.depth / 2 + 0.1;
-    group.add(goal1);
-
-    const goal2Mat = new THREE.MeshBasicMaterial({ color: TEAM_COLORS.team2, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
-    const goal2 = new THREE.Mesh(goalGeom, goal2Mat);
-    goal2.position.z = ARENA_SIZE.depth / 2 - 0.1;
-    group.add(goal2);
-
-    return group;
-  }
-
-  private createDisc(): THREE.Mesh {
-    const geom = new THREE.SphereGeometry(DISC_RADIUS, 16, 16);
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      emissive: 0xffffff,
-      emissiveIntensity: 2,
-      metalness: 0.9,
-      roughness: 0.1
-    });
-    return new THREE.Mesh(geom, mat);
-  }
-
-  private createPlayerMesh(player: PlayerState): THREE.Group {
-    const group = new THREE.Group();
-    const baseColor = player.team === 1 ? TEAM_COLORS.team1 : TEAM_COLORS.team2;
-    const finalColor = player.customColor ? new THREE.Color(player.customColor) : new THREE.Color(baseColor);
-
-    // Body Geometry based on shape
-    let bodyGeom: THREE.BufferGeometry;
-    switch (player.avatarShape) {
-      case 'cube':
-        bodyGeom = new THREE.BoxGeometry(PLAYER_RADIUS * 1.2, PLAYER_RADIUS * 1.2, PLAYER_RADIUS * 1.2);
-        break;
-      case 'sphere':
-        bodyGeom = new THREE.SphereGeometry(PLAYER_RADIUS, 16, 16);
-        break;
-      case 'octa':
-        bodyGeom = new THREE.OctahedronGeometry(PLAYER_RADIUS);
-        break;
-      case 'capsule':
-      default:
-        bodyGeom = new THREE.CapsuleGeometry(PLAYER_RADIUS * 0.8, PLAYER_RADIUS, 4, 8);
-        break;
-    }
-
-    const bodyMat = new THREE.MeshPhysicalMaterial({
-      color: finalColor,
-      emissive: finalColor,
-      emissiveIntensity: 0.5,
-      metalness: 0.8,
-      roughness: 0.2
-    });
-    const body = new THREE.Mesh(bodyGeom, bodyMat);
-    body.name = 'body';
-    group.add(body);
-
-    // Visor
-    const visorGeom = new THREE.SphereGeometry(PLAYER_RADIUS * 0.4, 8, 8);
-    const visorMat = new THREE.MeshStandardMaterial({ color: 0x000000, metalness: 1, roughness: 0 });
-    const visor = new THREE.Mesh(visorGeom, visorMat);
-    visor.position.set(0, 0.5, 0.5);
-    visor.scale.set(1.5, 0.6, 1);
-    group.add(visor);
-
-    // Glow Ring
-    const ringGeom = new THREE.TorusGeometry(PLAYER_RADIUS * 0.9, 0.05, 8, 32);
-    const ringMat = new THREE.MeshBasicMaterial({ color: finalColor });
-    const ring = new THREE.Mesh(ringGeom, ringMat);
-    ring.rotation.x = Math.PI / 2;
-    ring.name = 'ring';
-    group.add(ring);
-
-    // Shield (Initially hidden)
-    const shieldGeom = new THREE.SphereGeometry(PLAYER_RADIUS * 1.5, 16, 16);
-    const shieldMat = new THREE.MeshPhongMaterial({
-      color: 0x00ffff,
-      transparent: true,
-      opacity: 0.3,
-      side: THREE.DoubleSide
-    });
-    const shield = new THREE.Mesh(shieldGeom, shieldMat);
-    shield.name = 'shield';
-    shield.visible = false;
-    group.add(shield);
-
-    return group;
-  }
-
-  private createPowerUpMesh(type: string): THREE.Mesh {
-    const geom = new THREE.BoxGeometry(1.5, 1.5, 1.5);
-    let color = 0xffff00;
-    if (type === 'speed') color = 0x00ff00;
-    if (type === 'size') color = 0x0000ff;
-    if (type === 'shield') color = 0x00ffff;
-
-    const mat = new THREE.MeshStandardMaterial({
-      color,
-      emissive: color,
-      emissiveIntensity: 1,
-      transparent: true,
-      opacity: 0.8
-    });
-    return new THREE.Mesh(geom, mat);
-  }
-
-  private createLightProbeMesh(probe: LightProbeState): {
-    group: THREE.Group;
-    core: THREE.Mesh;
-    ring1: THREE.Mesh;
-    ring2: THREE.Mesh;
-    light: THREE.PointLight;
-  } {
-    const group = new THREE.Group();
-    const probeColor = new THREE.Color(probe.color);
-
-    // Glowing crystalline core
-    const coreGeom = new THREE.OctahedronGeometry(0.65, 0);
-    const coreMat = new THREE.MeshStandardMaterial({
-      color: probeColor,
-      emissive: probeColor,
-      emissiveIntensity: probe.intensity * 1.5,
-      roughness: 0.15,
-      metalness: 0.85,
-    });
-    const core = new THREE.Mesh(coreGeom, coreMat);
-    group.add(core);
-
-    // Outer kinetic gyro ring 1
-    const ring1Geom = new THREE.TorusGeometry(1.15, 0.035, 8, 32);
-    const ring1Mat = new THREE.MeshBasicMaterial({
-      color: probeColor,
-      transparent: true,
-      opacity: 0.75,
-    });
-    const ring1 = new THREE.Mesh(ring1Geom, ring1Mat);
-    group.add(ring1);
-
-    // Outer kinetic gyro ring 2 (angled)
-    const ring2Geom = new THREE.TorusGeometry(1.4, 0.025, 8, 32);
-    const ring2Mat = new THREE.MeshBasicMaterial({
-      color: probeColor,
-      transparent: true,
-      opacity: 0.5,
-    });
-    const ring2 = new THREE.Mesh(ring2Geom, ring2Mat);
-    ring2.rotation.x = Math.PI / 3;
-    group.add(ring2);
-
-    // Real-time PointLight casting dynamic glow across arena boundaries
-    const light = new THREE.PointLight(probeColor, probe.intensity * 2.2, probe.range || 20, 2);
-    group.add(light);
-
-    group.position.set(...probe.position);
-    return { group, core, ring1, ring2, light };
-  }
-
-  public update(state: GameState, myId: string, customCameraMode?: 'orbit' | 'disc' | 'player') {
+  public update(state: GameState, myId: string, customCameraMode?: 'orbit' | 'disc' | 'player', deltaSeconds = 1 / 60) {
     // Update Particles
     if (this.particles && this.particles.visible) {
       const posAttr = this.particles.geometry.attributes.position as THREE.BufferAttribute;
@@ -344,7 +172,9 @@ export class GameRenderer {
       // Skip rendering spectators
       if (playerState.isSpectator) {
         if (this.playerMeshes.has(id)) {
-          this.scene.remove(this.playerMeshes.get(id)!);
+          const oldMesh = this.playerMeshes.get(id)!;
+          this.scene.remove(oldMesh);
+          disposeObject3D(oldMesh);
           this.playerMeshes.delete(id);
         }
         continue;
@@ -353,8 +183,11 @@ export class GameRenderer {
       let mesh = this.playerMeshes.get(id);
       
       if (!mesh || mesh.userData.shape !== playerState.avatarShape) {
-        if (mesh) this.scene.remove(mesh);
-        mesh = this.createPlayerMesh(playerState);
+        if (mesh) {
+          this.scene.remove(mesh);
+          disposeObject3D(mesh);
+        }
+        mesh = createPlayerMesh(playerState);
         mesh.userData.shape = playerState.avatarShape;
         mesh.userData.color = playerState.customColor;
         this.scene.add(mesh);
@@ -373,7 +206,7 @@ export class GameRenderer {
       }
       
       // Interpolate position
-      mesh.position.lerp(new THREE.Vector3(...playerState.position), 0.2);
+      mesh.position.lerp(this.scratchVector.set(...playerState.position), 0.2);
 
       // Apply Visual Effects
       let radiusMult = 1.0;
@@ -383,7 +216,7 @@ export class GameRenderer {
         if (e.type === 'shield') hasShield = true;
       });
 
-      mesh.scale.setScalar(THREE.MathUtils.damp(mesh.scale.x, radiusMult, 2, 0.016));
+      mesh.scale.setScalar(THREE.MathUtils.damp(mesh.scale.x, radiusMult, 2, deltaSeconds));
       const shield = mesh.getObjectByName('shield');
       if (shield) {
         shield.visible = hasShield;
@@ -398,7 +231,7 @@ export class GameRenderer {
       let mesh = this.powerUpMeshes.get(pu.id);
       if (pu.active) {
         if (!mesh) {
-          mesh = this.createPowerUpMesh(pu.type);
+          mesh = createPowerUpMesh(pu.type);
           this.scene.add(mesh);
           this.powerUpMeshes.set(pu.id, mesh);
         }
@@ -407,6 +240,7 @@ export class GameRenderer {
         mesh.rotation.x += 0.01;
       } else if (mesh) {
         this.scene.remove(mesh);
+        disposeObject3D(mesh);
         this.powerUpMeshes.delete(pu.id);
       }
     });
@@ -415,6 +249,7 @@ export class GameRenderer {
     this.powerUpMeshes.forEach((mesh, id) => {
       if (!state.powerUps.find(p => p.id === id)) {
         this.scene.remove(mesh);
+        disposeObject3D(mesh);
         this.powerUpMeshes.delete(id);
       }
     });
@@ -424,18 +259,18 @@ export class GameRenderer {
     probes.forEach(probe => {
       let probeObj = this.probeMeshes.get(probe.id);
       if (!probeObj) {
-        probeObj = this.createLightProbeMesh(probe);
+        probeObj = createLightProbeMesh(probe);
         this.probeGroup.add(probeObj.group);
         this.probeMeshes.set(probe.id, probeObj);
       }
 
       // Smoothly ramp point light intensity in sync with audio beat & proximity surge
       const targetLightIntensity = probe.intensity * 2.2;
-      probeObj.light.intensity = THREE.MathUtils.damp(probeObj.light.intensity, targetLightIntensity, 8, 0.016);
+      probeObj.light.intensity = THREE.MathUtils.damp(probeObj.light.intensity, targetLightIntensity, 8, deltaSeconds);
 
       // Emissive core pulsing
       const coreMat = probeObj.core.material as THREE.MeshStandardMaterial;
-      coreMat.emissiveIntensity = THREE.MathUtils.damp(coreMat.emissiveIntensity, probe.intensity * 1.8, 8, 0.016);
+      coreMat.emissiveIntensity = THREE.MathUtils.damp(coreMat.emissiveIntensity, probe.intensity * 1.8, 8, deltaSeconds);
 
       // Kinetic gyro ring rotations (spinning in sync with probe intensity)
       const speedFactor = 1.0 + Math.min(probe.intensity, 3.0) * 0.6;
@@ -453,19 +288,14 @@ export class GameRenderer {
     this.probeMeshes.forEach((probeObj, id) => {
       if (!probes.find(p => p.id === id)) {
         this.probeGroup.remove(probeObj.group);
-        probeObj.core.geometry.dispose();
-        (probeObj.core.material as THREE.Material).dispose();
-        probeObj.ring1.geometry.dispose();
-        (probeObj.ring1.material as THREE.Material).dispose();
-        probeObj.ring2.geometry.dispose();
-        (probeObj.ring2.material as THREE.Material).dispose();
+        disposeObject3D(probeObj.group);
         this.probeMeshes.delete(id);
       }
     });
 
     // Camera handling
     if (this.highlightTimer > 0) {
-      this.highlightTimer -= 0.016; // Approx 60fps
+      this.highlightTimer -= deltaSeconds;
       if (this.highlightTarget) {
         // Slow-mo zoom
         const zoomPos = this.highlightTarget.clone().add(new THREE.Vector3(0, 2, 8 * Math.sign(this.highlightTarget.z)));
@@ -537,12 +367,12 @@ export class GameRenderer {
       // Intensity boost from match action
       const actionBoost = intensityFactor * 0.3;
       
-      this.ambientLight.intensity = THREE.MathUtils.damp(this.ambientLight.intensity, baseAmbient + actionBoost, 2, 0.016);
-      this.mainLight.intensity = THREE.MathUtils.damp(this.mainLight.intensity, 0.5 + (timeFactor * 0.5) + actionBoost, 2, 0.016);
+      this.ambientLight.intensity = THREE.MathUtils.damp(this.ambientLight.intensity, baseAmbient + actionBoost, 2, deltaSeconds);
+      this.mainLight.intensity = THREE.MathUtils.damp(this.mainLight.intensity, 0.5 + (timeFactor * 0.5) + actionBoost, 2, deltaSeconds);
 
       // Adjust Fog density based on "time of day"
       if (this.scene.fog instanceof THREE.Fog) {
-        this.scene.fog.far = THREE.MathUtils.damp(this.scene.fog.far, 50 + (timeFactor * 100), 2, 0.016);
+        this.scene.fog.far = THREE.MathUtils.damp(this.scene.fog.far, 50 + (timeFactor * 100), 2, deltaSeconds);
       }
     }
 
@@ -550,6 +380,7 @@ export class GameRenderer {
     this.playerMeshes.forEach((mesh, id) => {
       if (!state.players[id]) {
         this.scene.remove(mesh);
+        disposeObject3D(mesh);
         this.playerMeshes.delete(id);
       }
     });
@@ -567,17 +398,14 @@ export class GameRenderer {
   }
 
   public dispose() {
-    this.probeMeshes.forEach(probeObj => {
-      this.probeGroup.remove(probeObj.group);
-      probeObj.core.geometry.dispose();
-      (probeObj.core.material as THREE.Material).dispose();
-      probeObj.ring1.geometry.dispose();
-      (probeObj.ring1.material as THREE.Material).dispose();
-      probeObj.ring2.geometry.dispose();
-      (probeObj.ring2.material as THREE.Material).dispose();
-    });
-    this.probeMeshes.clear();
-    this.renderer.dispose();
     window.removeEventListener('resize', this.onResize);
+    disposeObject3D(this.scene);
+    this.scene.environment?.dispose();
+    this.probeMeshes.clear();
+    this.playerMeshes.clear();
+    this.powerUpMeshes.clear();
+    this.composer.dispose();
+    this.renderer.dispose();
+    this.renderer.domElement.remove();
   }
 }

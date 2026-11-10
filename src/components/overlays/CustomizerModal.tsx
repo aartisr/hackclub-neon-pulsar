@@ -1,12 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChassisType, CHASSIS_TYPES, COLOR_PALETTE } from '../../types/game';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { ChassisType } from '../../types/game';
+import { ChassisPicker, ColorPalette } from '../ui/PilotSelectors';
 
 export interface CustomizerModalProps {
   isOpen: boolean;
@@ -25,6 +20,14 @@ export const CustomizerModal: React.FC<CustomizerModalProps> = ({
   onSelectColor,
   onSelectShape,
 }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, onClose]);
   return (
     <AnimatePresence>
       {isOpen && (
@@ -33,10 +36,10 @@ export const CustomizerModal: React.FC<CustomizerModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
+          className="safe-screen absolute inset-0 z-[60] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/80 backdrop-blur-md"
         >
-          <div className="w-full max-w-sm p-6 sm:p-8 rounded-3xl bg-black border border-white/20 shadow-2xl">
-            <h3 className="font-display text-xl font-bold uppercase italic tracking-tight mb-5 text-white">
+          <div role="dialog" aria-modal="true" aria-labelledby="pilot-config-title" className="premium-panel w-full max-w-sm my-auto p-4 min-[375px]:p-6 sm:p-8 rounded-3xl">
+            <h3 id="pilot-config-title" className="font-display text-xl font-bold uppercase italic tracking-tight mb-5 text-white">
               Pilot Configuration
             </h3>
             
@@ -45,46 +48,14 @@ export const CustomizerModal: React.FC<CustomizerModalProps> = ({
                 <label className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2.5 block">
                   Energy Core Wavelength
                 </label>
-                <div className="grid grid-cols-6 gap-2">
-                  {COLOR_PALETTE.map((c, cIdx) => (
-                    <button
-                      key={`custom-palette-${c.hex}-${cIdx}`}
-                      onClick={() => onSelectColor(c.hex)}
-                      className={cn(
-                        "w-10 h-10 rounded-full border-2 transition-all mx-auto",
-                        customColor === c.hex 
-                          ? "border-white scale-110 shadow-[0_0_12px_rgba(255,255,255,0.7)]" 
-                          : "border-transparent opacity-60 hover:opacity-100"
-                      )}
-                      style={{ backgroundColor: c.hex }}
-                      title={c.name}
-                      aria-label={`Select ${c.name}`}
-                    />
-                  ))}
-                </div>
+                <ColorPalette value={customColor} onChange={onSelectColor} size="large" />
               </div>
 
               <div>
                 <label className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-2.5 block">
                   Chassis Geometry
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {CHASSIS_TYPES.map((s, sIdx) => (
-                    <button
-                      key={`custom-chassis-${s.id}-${sIdx}`}
-                      onClick={() => onSelectShape(s.id)}
-                      className={cn(
-                        "p-3 rounded-xl border text-left transition-all",
-                        avatarShape === s.id 
-                          ? "bg-white text-black border-white font-bold" 
-                          : "bg-white/5 border-white/10 text-white/60 hover:text-white hover:bg-white/10"
-                      )}
-                    >
-                      <div className="text-xs font-bold uppercase">{s.label}</div>
-                      <div className="text-[10px] opacity-60">{s.desc}</div>
-                    </button>
-                  ))}
-                </div>
+                <ChassisPicker value={avatarShape} onChange={onSelectShape} detail />
               </div>
 
               <button

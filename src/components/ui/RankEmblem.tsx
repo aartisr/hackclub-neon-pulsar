@@ -1,14 +1,9 @@
+import { cn } from '../../lib/ui/cn';
 import React from 'react';
 import { 
   LucideShield, LucideMedal, LucideTrophy, LucideCrown 
 } from 'lucide-react';
 import { RankTier } from '../../hooks/useCareerStats';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 export interface RankEmblemProps {
   tier: RankTier;

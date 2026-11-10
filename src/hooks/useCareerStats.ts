@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 export type CareerStats = {
   goals: number;
@@ -33,6 +33,24 @@ const DEFAULT_STATS: CareerStats = {
   gamesPlayed: 0,
   victories: 0,
 };
+
+function readStats(): CareerStats {
+  try {
+    const value = window.localStorage.getItem(STORAGE_KEY);
+    if (!value) return { ...DEFAULT_STATS };
+    const parsed: unknown = JSON.parse(value);
+    if (!parsed || typeof parsed !== 'object') return { ...DEFAULT_STATS };
+    const record = parsed as Record<string, unknown>;
+    const count = (key: keyof CareerStats) =>
+      typeof record[key] === 'number' && Number.isFinite(record[key])
+        ? Math.max(0, Math.floor(record[key]))
+        : 0;
+    const gamesPlayed = count('gamesPlayed');
+    return { goals: count('goals'), gamesPlayed, victories: Math.min(count('victories'), gamesPlayed) };
+  } catch {
+    return { ...DEFAULT_STATS };
+  }
+}
 
 export function getRankInfo(victories: number): RankInfo {
   if (victories < 5) {
@@ -97,36 +115,27 @@ export function getRankInfo(victories: number): RankInfo {
 }
 
 export function useCareerStats() {
-  const [stats, setStats] = useState<CareerStats>(() => {
-    if (typeof window === 'undefined') return DEFAULT_STATS;
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        return { ...DEFAULT_STATS, ...JSON.parse(stored) };
-      } catch (e) {
-        console.error('Failed to parse career stats', e);
-      }
-    }
-    return DEFAULT_STATS;
-  });
+  const [stats, setStats] = useState<CareerStats>(() => typeof window === 'undefined' ? { ...DEFAULT_STATS } : readStats());
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+    } catch {
+      // The game remains usable when storage is unavailable.
     }
   }, [stats]);
 
-  const addGoal = () => {
+  const addGoal = useCallback(() => {
     setStats(prev => ({ ...prev, goals: prev.goals + 1 }));
-  };
+  }, []);
 
-  const addGame = (victory: boolean) => {
+  const addGame = useCallback((victory: boolean) => {
     setStats(prev => ({
       ...prev,
       gamesPlayed: prev.gamesPlayed + 1,
       victories: victory ? prev.victories + 1 : prev.victories,
     }));
-  };
+  }, []);
 
   const rankInfo = getRankInfo(stats.victories);
   const winRate = stats.gamesPlayed > 0 ? Math.round((stats.victories / stats.gamesPlayed) * 100) : 0;

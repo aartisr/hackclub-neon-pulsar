@@ -24,6 +24,10 @@ export interface GameHudProps {
   onMoveDirection: (axis: 'x' | 'z', value: number) => void;
   onAltitude: (value: number) => void;
   onThrow: () => void;
+  onOpenChat: () => void;
+  onSendChat: () => void;
+  onCloseChat: () => void;
+  onChangeTeamOnlyChat: (teamOnly: boolean) => void;
 }
 
 export const GameHud: React.FC<GameHudProps> = ({
@@ -41,11 +45,15 @@ export const GameHud: React.FC<GameHudProps> = ({
   onMoveDirection,
   onAltitude,
   onThrow,
+  onOpenChat,
+  onSendChat,
+  onCloseChat,
+  onChangeTeamOnlyChat,
 }) => {
   const localPlayer = gameState.players[myId];
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-10 p-4 sm:p-6 flex flex-col justify-between overflow-hidden">
+    <div className="safe-screen absolute inset-0 pointer-events-none z-10 flex flex-col justify-between overflow-hidden">
       {/* Top Floating Bar */}
       <Scoreboard
         score={gameState.score}
@@ -68,14 +76,15 @@ export const GameHud: React.FC<GameHudProps> = ({
       />
 
       {/* Velocity Gauge */}
-      <Speedometer velocity={gameState.disc.velocity} />
+      {!isTouch && <Speedometer velocity={gameState.disc.velocity} />}
 
       {/* Touch Flight Controls for Mobile/Tablet */}
-      {isTouch && (
+      {isTouch && !isChatOpen && (
         <TouchControls
           onMoveDirection={onMoveDirection}
           onAltitude={onAltitude}
           onThrow={onThrow}
+          onOpenChat={onOpenChat}
         />
       )}
 
@@ -95,6 +104,10 @@ export const GameHud: React.FC<GameHudProps> = ({
         teamOnlyChat={teamOnlyChat}
         chatInput={chatInput}
         onChangeChatInput={onChangeChatInput}
+        onSendChat={onSendChat}
+        onCloseChat={onCloseChat}
+        onChangeTeamOnlyChat={onChangeTeamOnlyChat}
+        isTouch={isTouch}
       />
     </div>
   );

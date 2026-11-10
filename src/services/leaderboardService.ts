@@ -21,7 +21,7 @@ export interface LeaderboardEntry {
   isCurrentPlayer?: boolean;
 }
 
-// Initial mock public Firestore collection entries
+// Sample entries until a persistent leaderboard service is connected.
 const INITIAL_LEADERBOARD_COLLECTION: Omit<LeaderboardEntry, 'rank' | 'rankTier' | 'badgeLabel'>[] = [
   {
     id: 'pilot-top-1',
@@ -126,8 +126,7 @@ const INITIAL_LEADERBOARD_COLLECTION: Omit<LeaderboardEntry, 'rank' | 'rankTier'
 ];
 
 /**
- * Mock Firestore Public Leaderboard Service
- * Simulates fetching top 10 public career stats from Firestore public collection 'career_leaderboards'
+ * Return sample standings with the current browser's career stats.
  */
 export async function fetchTop10Leaderboard(
   currentPlayerName: string,
@@ -136,9 +135,6 @@ export async function fetchTop10Leaderboard(
   currentColor: string,
   sortBy: 'victories' | 'goals' | 'winRate' = 'victories'
 ): Promise<LeaderboardEntry[]> {
-  // Simulate network latency (250ms)
-  await new Promise((resolve) => setTimeout(resolve, 250));
-
   const entriesMap = new Map<string, Omit<LeaderboardEntry, 'rank' | 'rankTier' | 'badgeLabel'>>();
 
   INITIAL_LEADERBOARD_COLLECTION.forEach((item) => {

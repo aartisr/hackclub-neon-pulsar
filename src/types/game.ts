@@ -1,6 +1,76 @@
-import { GameState, PlayerState, DiscState, GameAction, PowerUpState, ChatMessage, LightProbeState } from '../lib/network/PeerManager';
+export type GameState = {
+  players: Record<string, PlayerState>;
+  disc: DiscState;
+  score: { team1: number; team2: number };
+  time: number;
+  status: 'lobby' | 'playing' | 'ended';
+  messages: ChatMessage[];
+  powerUps: PowerUpState[];
+  lightProbes?: LightProbeState[];
+};
 
-export type { GameState, PlayerState, DiscState, GameAction, PowerUpState, ChatMessage, LightProbeState };
+export type LightProbeState = {
+  id: string;
+  position: [number, number, number];
+  intensity: number;
+  color: string;
+  pulsePhase: number;
+  range: number;
+};
+
+export type PowerUpState = {
+  id: string;
+  type: 'speed' | 'size' | 'shield';
+  position: [number, number, number];
+  active: boolean;
+};
+
+export type PlayerEffect = {
+  type: 'speed' | 'size' | 'shield';
+  endTime: number;
+};
+
+export type ChatMessage = {
+  id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  team: 1 | 2;
+  teamOnly: boolean;
+  timestamp: number;
+};
+
+export type PlayerState = {
+  id: string;
+  name: string;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  team: 1 | 2;
+  ready: boolean;
+  isSpectator: boolean;
+  effects: PlayerEffect[];
+  customColor?: string;
+  avatarShape?: 'capsule' | 'cube' | 'sphere' | 'octa';
+};
+
+export type DiscState = {
+  position: [number, number, number];
+  velocity: [number, number, number];
+  ownerId: string | null;
+};
+
+export type MoveInput = { x: number; y: number; z: number; jump: boolean; dash: boolean };
+
+export type GameAction =
+  | { type: 'JOIN'; name: string; color?: string; shape?: 'capsule' | 'cube' | 'sphere' | 'octa' }
+  | { type: 'LEAVE' }
+  | { type: 'READY'; ready: boolean }
+  | { type: 'MOVE'; input: MoveInput }
+  | { type: 'THROW'; direction: [number, number, number] }
+  | { type: 'CHAT'; text: string; teamOnly: boolean }
+  | { type: 'CUSTOMIZE'; color: string; shape: 'capsule' | 'cube' | 'sphere' | 'octa' }
+  | { type: 'SWITCH_TEAM'; team: 1 | 2 }
+  | { type: 'START_GAME' };
 
 export type ChassisType = 'capsule' | 'cube' | 'sphere' | 'octa';
 
@@ -41,17 +111,6 @@ export const DEFAULT_LIGHT_PROBES: LightProbeState[] = [
   { id: 'probe-magenta-right', position: [17, 6, 20], intensity: 1.0, color: '#ff00ff', pulsePhase: Math.PI / 2, range: 18 },
   { id: 'probe-magenta-goal', position: [0, 8, 28], intensity: 1.2, color: '#d946ef', pulsePhase: 0, range: 22 },
 ];
-
-export const INITIAL_GAME_STATE: GameState = {
-  players: {},
-  disc: { position: [0, 0, 0], velocity: [0, 0, 0], ownerId: null },
-  score: { team1: 0, team2: 0 },
-  time: 0,
-  status: 'lobby',
-  messages: [],
-  powerUps: [],
-  lightProbes: DEFAULT_LIGHT_PROBES,
-};
 
 export interface ReplayPlayerFrame {
   id: string;

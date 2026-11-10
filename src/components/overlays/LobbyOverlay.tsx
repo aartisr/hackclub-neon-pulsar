@@ -14,7 +14,11 @@ export interface LobbyOverlayProps {
   customColor: string;
   avatarShape: ChassisType;
   copiedInvite: boolean;
+  copiedRoomCode: boolean;
+  copyError: string;
+  roomCode: string;
   onCopyInvite: () => void;
+  onCopyRoomCode: () => void;
   onLeave: () => void;
   onOpenCustomizer: () => void;
   onSwitchTeam: (team: 1 | 2) => void;
@@ -29,7 +33,11 @@ export const LobbyOverlay: React.FC<LobbyOverlayProps> = ({
   customColor,
   avatarShape,
   copiedInvite,
+  copiedRoomCode,
+  copyError,
+  roomCode,
   onCopyInvite,
+  onCopyRoomCode,
   onLeave,
   onOpenCustomizer,
   onSwitchTeam,
@@ -46,9 +54,9 @@ export const LobbyOverlay: React.FC<LobbyOverlayProps> = ({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.98 }}
       transition={{ duration: 0.2 }}
-      className="absolute inset-0 z-40 flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-md overflow-y-auto"
+      className="safe-screen absolute inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-md overflow-y-auto overscroll-contain"
     >
-      <div className="w-full max-w-2xl my-auto p-6 sm:p-8 rounded-3xl bg-black/85 border border-white/15 backdrop-blur-2xl shadow-[0_0_60px_rgba(0,0,0,0.9)]">
+      <div className="premium-panel w-full max-w-2xl my-auto p-4 min-[375px]:p-6 sm:p-8 rounded-3xl">
         
         {/* Lobby Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-6 border-b border-white/10">
@@ -73,7 +81,7 @@ export const LobbyOverlay: React.FC<LobbyOverlayProps> = ({
             <button
               onClick={onCopyInvite}
               className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-xs font-semibold transition-all hover:border-cyan-400/50"
-              title="Click to copy invite link"
+              title="Copy invite link"
             >
               {copiedInvite ? (
                 <>
@@ -83,8 +91,7 @@ export const LobbyOverlay: React.FC<LobbyOverlayProps> = ({
               ) : (
                 <>
                   <LucideShare2 size={14} className="text-cyan-400" />
-                  <span className="font-mono-code text-[11px]">{myId.substring(0, 8)}...</span>
-                  <LucideCopy size={13} className="text-white/40" />
+                  <span>Copy Invite Link</span>
                 </>
               )}
             </button>
@@ -99,8 +106,24 @@ export const LobbyOverlay: React.FC<LobbyOverlayProps> = ({
           </div>
         </div>
 
+        <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-white/50">Room Code</div>
+            <code className="block overflow-x-auto whitespace-nowrap text-xs text-cyan-300 select-all">{roomCode}</code>
+          </div>
+          <button
+            onClick={onCopyRoomCode}
+            className="shrink-0 flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-xs font-semibold hover:border-cyan-400/50 hover:bg-white/10"
+            title="Copy full room code"
+          >
+            {copiedRoomCode ? <LucideCheck size={14} /> : <LucideCopy size={14} />}
+            {copiedRoomCode ? 'Copied!' : 'Copy Code'}
+          </button>
+        </div>
+        {copyError && <p role="alert" className="mb-4 text-xs text-red-300">{copyError}</p>}
+
         {/* Pilot Active Chassis Badge & Customize Trigger */}
-        <div className="flex items-center justify-between mb-6 p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6 p-3.5 rounded-2xl bg-white/[0.03] border border-white/10">
           <div className="flex items-center gap-3">
             <div 
               className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/20 shadow-md"
@@ -198,7 +221,7 @@ export const LobbyOverlay: React.FC<LobbyOverlayProps> = ({
         {isHost ? (
           <button
             onClick={onStartGame}
-            className="w-full py-4 rounded-2xl bg-white hover:bg-cyan-100 text-black font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2.5 shadow-[0_0_40px_rgba(255,255,255,0.4)] hover:scale-[1.01] active:scale-95"
+            className="w-full min-h-12 py-3 rounded-2xl bg-gradient-to-r from-cyan-200 via-white to-fuchsia-200 hover:brightness-110 text-slate-950 font-black uppercase tracking-wider sm:tracking-[0.2em] transition-all flex items-center justify-center gap-2.5 shadow-[0_0_40px_rgba(103,232,249,0.3)] active:scale-95"
           >
             <LucidePlay size={18} fill="currentColor" />
             Initiate Combat Round

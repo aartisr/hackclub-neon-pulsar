@@ -1,3 +1,4 @@
+import { cn } from '../../lib/ui/cn';
 import React from 'react';
 import { motion } from 'framer-motion';
 import { 
@@ -5,12 +6,6 @@ import {
   LucideFastForward, LucideLogOut, LucideCamera, LucideEye 
 } from 'lucide-react';
 import { CameraMode } from '../../hooks/useMatchReplay';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 export interface ReplayHudProps {
   isReplaying: boolean;
@@ -62,15 +57,15 @@ export const ReplayHud: React.FC<ReplayHudProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-50 p-4 sm:p-6 flex flex-col justify-between overflow-hidden">
+    <div className="safe-screen absolute inset-0 pointer-events-none z-50 flex flex-col justify-between gap-4 overflow-y-auto overscroll-contain">
       
       {/* Top Bar: Replay Mode Badge & Camera Controls */}
-      <div className="w-full flex justify-between items-start">
+      <div className="flex w-full shrink-0 flex-wrap items-start justify-between gap-2">
         {/* Replay Indicator Badge */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-black/80 backdrop-blur-xl border border-cyan-500/40 px-4 py-2 rounded-2xl flex items-center gap-3 shadow-[0_0_25px_rgba(6,182,212,0.3)] pointer-events-auto"
+          className="flex items-center gap-2 rounded-2xl border border-cyan-500/40 bg-black/80 px-3 py-2 shadow-[0_0_25px_rgba(6,182,212,0.3)] backdrop-blur-xl pointer-events-auto sm:gap-3 sm:px-4"
         >
           <div className="w-8 h-8 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400">
             <LucideFilm size={18} />
@@ -88,8 +83,9 @@ export const ReplayHud: React.FC<ReplayHudProps> = ({
         <div className="bg-black/80 backdrop-blur-xl border border-white/15 p-1 sm:p-1.5 rounded-2xl flex items-center gap-1 shadow-2xl pointer-events-auto">
           <button
             onClick={() => onSetCameraMode('disc')}
+            aria-label="Follow disc camera"
             className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all",
+              "min-h-11 min-w-11 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all",
               cameraMode === 'disc'
                 ? "bg-cyan-500 text-black shadow-[0_0_12px_rgba(6,182,212,0.6)] font-bold"
                 : "text-white/60 hover:text-white hover:bg-white/10"
@@ -101,8 +97,9 @@ export const ReplayHud: React.FC<ReplayHudProps> = ({
           </button>
           <button
             onClick={() => onSetCameraMode('orbit')}
+            aria-label="Orbit camera"
             className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all",
+              "min-h-11 min-w-11 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all",
               cameraMode === 'orbit'
                 ? "bg-cyan-500 text-black shadow-[0_0_12px_rgba(6,182,212,0.6)] font-bold"
                 : "text-white/60 hover:text-white hover:bg-white/10"
@@ -119,7 +116,7 @@ export const ReplayHud: React.FC<ReplayHudProps> = ({
       <motion.div 
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-3xl mx-auto bg-black/85 backdrop-blur-2xl border border-white/20 p-4 sm:p-5 rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.9)] pointer-events-auto space-y-3"
+        className="premium-panel w-full max-w-3xl shrink-0 mx-auto p-3 min-[375px]:p-4 sm:p-5 rounded-3xl pointer-events-auto space-y-3"
       >
         
         {/* Timeline Slider with Timestamps */}
@@ -135,7 +132,8 @@ export const ReplayHud: React.FC<ReplayHudProps> = ({
             step={0.1}
             value={currentTime}
             onChange={(e) => onSeekToTime(parseFloat(e.target.value))}
-            className="w-full accent-cyan-400 cursor-pointer h-2 bg-white/10 rounded-lg appearance-none"
+            aria-label="Replay position"
+            className="w-full accent-cyan-400 cursor-pointer h-11 bg-white/10 rounded-lg"
           />
         </div>
 
@@ -146,7 +144,8 @@ export const ReplayHud: React.FC<ReplayHudProps> = ({
           <div className="flex items-center gap-2">
             <button
               onClick={handleRewind5s}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-all"
+              aria-label="Rewind five seconds"
+              className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-all"
               title="Rewind 5 seconds"
             >
               <LucideRewind size={16} />
@@ -154,7 +153,7 @@ export const ReplayHud: React.FC<ReplayHudProps> = ({
 
             <button
               onClick={onTogglePlayPause}
-              className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold flex items-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.5)] transition-all active:scale-95"
+              className="min-h-11 px-4 py-2 rounded-xl bg-cyan-400 hover:bg-cyan-300 text-black font-extrabold flex items-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.5)] transition-all active:scale-95"
             >
               {isPlaying ? <LucidePause size={18} /> : <LucidePlay size={18} />}
               <span className="text-xs uppercase tracking-wider">{isPlaying ? 'Pause' : 'Play'}</span>
@@ -162,7 +161,8 @@ export const ReplayHud: React.FC<ReplayHudProps> = ({
 
             <button
               onClick={handleForward5s}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-all"
+              aria-label="Forward five seconds"
+              className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white transition-all"
               title="Fast forward 5 seconds"
             >
               <LucideFastForward size={16} />
@@ -176,7 +176,7 @@ export const ReplayHud: React.FC<ReplayHudProps> = ({
                 key={`speed-${speed}`}
                 onClick={() => onSetSpeed(speed)}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg text-[11px] font-mono-code font-bold transition-all",
+                  "min-h-11 px-2.5 py-1 rounded-lg text-[11px] font-mono-code font-bold transition-all",
                   playbackSpeed === speed
                     ? "bg-white text-black shadow-sm"
                     : "text-white/50 hover:text-white"
@@ -190,7 +190,7 @@ export const ReplayHud: React.FC<ReplayHudProps> = ({
           {/* Exit Replay Button */}
           <button
             onClick={onExitReplay}
-            className="px-4 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors"
+            className="min-h-11 px-4 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/40 text-red-300 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-colors"
           >
             <LucideLogOut size={14} />
             <span>Exit Replay</span>

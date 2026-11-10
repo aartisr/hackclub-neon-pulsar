@@ -1,11 +1,6 @@
+import { cn } from '../../lib/ui/cn';
 import React from 'react';
 import { LucideVolume2, LucideVolumeX } from 'lucide-react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 export interface SoundToggleProps {
   enabled: boolean;
@@ -24,7 +19,7 @@ export const SoundToggle: React.FC<SoundToggleProps> = ({
     <button
       onClick={onToggle}
       className={cn(
-        "flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold backdrop-blur-md transition-all shadow-lg pointer-events-auto",
+        "flex min-h-11 min-w-11 items-center justify-center gap-2 px-3 py-1.5 rounded-full border text-xs font-semibold backdrop-blur-md transition-all shadow-lg pointer-events-auto",
         enabled 
           ? "bg-cyan-500/20 border-cyan-500/40 text-cyan-300 shadow-[0_0_15px_rgba(6,182,212,0.2)]" 
           : "bg-black/50 border-white/10 text-white/50 hover:text-white hover:border-white/20",

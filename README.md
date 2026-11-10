@@ -1,6 +1,6 @@
 # Neon Pulsar: Zero-G Arena
 
-A high-octane, zero-latency 3D multiplayer disc combat sport built for the browser. Featuring zero-gravity physics, WebRTC peer-to-peer networking, WebGL bloom post-processing, procedurally synthesized dynamic audio, customizable avatars, power-ups, and haptic feedback.
+A 3D multiplayer disc combat sport built for the browser. Featuring zero-gravity physics, WebRTC peer-to-peer networking, WebGL bloom post-processing, procedurally synthesized dynamic audio, customizable avatars, power-ups, and haptic feedback.
 
 ---
 
@@ -55,10 +55,10 @@ A high-octane, zero-latency 3D multiplayer disc combat sport built for the brows
 1. **Set Pilot Handle**: Enter your pilot callsign on the landing menu.
 2. **Host an Arena**:
    - Click **Host Arena** to instantiate a room as the authoritative host peer.
-   - An arena code is automatically generated. Click the lobby share button or copy the room code to distribute to other pilots.
+   - An arena code is automatically generated. In the Combat Lobby, use **Copy Code** to share the full room code, or **Copy Invite Link** to share a link.
 3. **Join an Arena**:
-   - Other players click **Join Arena**, enter the host's room code, and click **Initialize Connection**.
-   - Peers connect directly via WebRTC DataChannels with zero intermediate servers.
+   - Other players click **Join Arena**, paste the full room code or invite link, and click **Connect to Arena**.
+   - PeerJS uses a signaling service to establish the connection; match data then travels over WebRTC DataChannels.
 4. **Combat Lobby**:
    - In the lobby, pilots are automatically assigned to **Team Cyan** or **Team Magenta**.
    - The host initiates the combat simulation once pilots are ready.
@@ -98,7 +98,7 @@ Pilots operate in six degrees of freedom within zero-G:
 | `LEFT SHIFT` | **Descend** | Vertical thrusters downward (`-Y` axis) |
 | `E` | **Throw Disc** | Launch the disc forward with high impulse |
 | `T` | **Global Chat** | Open open-frequency broadcast chat to all players |
-| `Y` | **Team Chat** | Open encrypted frequency chat visible only to teammates |
+| `Y` | **Team Chat** | Open team chat delivered only to teammates |
 | `ENTER` | **Send Chat** | Transmit text and dismiss chat focus |
 | `ESC` | **Dismiss HUD** | Close open menus/chat overlays |
 
@@ -134,8 +134,8 @@ Power-ups animate with orbital spin in Three.js and despawn automatically upon c
 ### 6. 3D Match Replay System
 
 After a match concludes, pilots can click **Watch 3D Match Replay** on the victory screen to enter a full 3D playback simulation:
-- **Telemetry Recording**: Captures 30 FPS spatial telemetry (disc trajectory, velocity, player coordinates, scores) during live play (~250 KB memory footprint per match).
-- **Butter-Smooth 60 FPS Interpolation**: Uses linear vector lerping between keyframes to render liquid-smooth 60 FPS spatial playback.
+- **Telemetry Recording**: Captures up to 30 FPS spatial telemetry (disc trajectory, velocity, player coordinates, scores) during live play, retaining at most 5,400 frames.
+- **Replay Interpolation**: Uses linear vector interpolation between recorded frames at the browser's refresh rate.
 - **Timeline Scrubbing & Controls**: Interactive timeline range slider with precise timestamp display, Play/Pause toggle, and 5-second Jump Rewind/Forward buttons.
 - **Variable Playback Speeds**: Toggle between `0.5x` (slow-motion analysis), `1.0x` (real-time), `2.0x`, and `4.0x` fast-forward speeds.
 - **Cinematic Replay Camera Modes**: Switch seamlessly between **Follow Disc** (tracks disc movement across zero-G space) and **Orbit View** (spins wide cinematic angles around the entire arena grid).
@@ -191,8 +191,8 @@ All pilot achievements persist locally via `localStorage` through `useCareerStat
                                   |  - Power-up Spawner                   |
                                   +-------------------+-------------------+
                                                       |
-                                   WebRTC DataChannel | (Broadcast State @ 60 FPS)
-                                   (PeerJS Mesh/Star) | (Receive Inputs / Actions)
+                                   WebRTC DataChannel | (State snapshots up to 20 Hz)
+                                   (PeerJS host star) | (Receive Inputs / Actions)
                                                       |
                          +----------------------------+----------------------------+
                          |                                                         |
@@ -210,7 +210,7 @@ All pilot achievements persist locally via `localStorage` through `useCareerStat
 - **Runtime & UI**: React 19 SPA running on Vite 8, styled with Tailwind CSS v4.
 - **3D Graphics Engine**: Three.js (`r187`) with custom geometry buffers and materials.
 - **Post-Processing**: `three-stdlib` `EffectComposer` pipeline running `RenderPass` and `UnrealBloomPass` with HDR tone mapping (`ACESFilmicToneMapping`).
-- **Networking**: `peerjs` WebRTC DataChannel layer providing sub-millisecond host-authoritative peer synchronization without server infrastructure.
+- **Networking**: `peerjs` WebRTC DataChannel layer for host-authoritative state synchronization. A signaling service is required to establish connections; latency depends on the peers and network.
 - **Audio Synthesis**: Pure Web Audio API procedural synthesizer (zero audio assets/mp3 downloads).
 - **Physics**: Custom zero-G 3D kinematic physics engine with drag coefficients, elastic boundary restitution, and sphere-sphere collision detection.
 
@@ -222,25 +222,27 @@ The application employs a **host-authoritative star topology** built on WebRTC D
 
 1. **Host Peer**:
    - Manages the authoritative `GameState` clock at 60 Hz.
-   - Evaluates input buffers received from all peers (`MOVE`, `THROW`, `CUSTOMIZE`, `START_GAME`).
+   - Validates client actions (`MOVE`, `THROW`, `CUSTOMIZE`, and chat); only the host can start a round.
    - Runs `PhysicsEngine.update()` to advance disc positions, resolve collisions, and register goals.
-   - Broadcasts the synchronized state payload to all connected peers via `peerRef.current.broadcastState()`.
+   - Broadcasts state snapshots at up to 20 Hz during play and immediately when lobby state changes.
 2. **Client Peers**:
    - Transmit local input vectors (`localInputRef`) to the host.
    - Receive full state snapshots and interpolate positions within `GameRenderer.update()`.
-   - Maintain seamless disconnect recovery through connection listeners.
+   - Show an error and return to the join screen if the host disconnects.
 
 #### Network Message Schema
 
 ```typescript
 export type GameAction = 
-  | { type: 'JOIN'; name: string; color?: string; shape?: AvatarShape }
+  | { type: 'JOIN'; name: string; color?: string; shape?: ChassisType }
+  | { type: 'LEAVE' } // host handles a peer disconnect
   | { type: 'READY'; ready: boolean }
   | { type: 'MOVE'; input: { x: number; y: number; z: number; jump: boolean; dash: boolean } }
   | { type: 'THROW'; direction: [number, number, number] }
   | { type: 'CHAT'; text: string; teamOnly: boolean }
-  | { type: 'CUSTOMIZE'; color: string; shape: AvatarShape }
-  | { type: 'START_GAME' };
+  | { type: 'CUSTOMIZE'; color: string; shape: ChassisType }
+  | { type: 'SWITCH_TEAM'; team: 1 | 2 }
+  | { type: 'START_GAME' }; // host only
 ```
 
 ---
@@ -253,7 +255,7 @@ Located in `src/lib/game/Physics.ts`:
   $$\vec{v}_{t+1} = \vec{v}_t \times 0.98$$
 - **Boundary Collisions**: Disc reverses axis velocity with restitution elasticity (`0.8`):
   $$v_x \leftarrow -v_x \times 0.8$$
-- **Dynamic Arena Light Probes**: 4 dynamic light probes strategically placed across the arena ceiling and goal portals modulate their pulse frequency, intensity, and hue in sync with audio intensity and disc velocity:
+- **Dynamic Arena Light Probes**: 8 dynamic light probes across the arena modulate their intensity in sync with match time and disc velocity:
   $$I_{\text{probe}} = I_{\text{base}} + \sin(\omega t) \cdot 1.5 \times (1 + \|\vec{v}_{\text{disc}}\|)$$
 - **Dynamic Pickup Radii**: Interception testing scales based on player status and active `size` power-ups:
   $$\text{dist}^2 < (r_{\text{player}} \cdot \text{scale} + r_{\text{disc}})^2$$
@@ -296,52 +298,15 @@ Located in `src/lib/audio/AudioManager.ts`:
 
 ## Project Structure
 
-```
-├── .env.example                  # Environment variable definitions
-├── index.html                    # HTML entry point with Orbitron & Plus Jakarta Sans
-├── metadata.json                 # AI Studio applet metadata & capabilities
-├── package.json                  # Project dependencies & build scripts
-├── tsconfig.json                 # TypeScript configuration
-├── vite.config.ts                # Vite configuration with React & Tailwind plugins
-└── src/
-    ├── main.tsx                  # React DOM bootstrap
-    ├── index.css                 # Tailwind v4 theme & font definitions
-    ├── App.tsx                   # Modular composition root & game coordinator
-    ├── types/
-    │   └── game.ts               # Centralized game types, actions, & chassis presets
-    ├── hooks/
-    │   ├── useCareerStats.ts     # LocalStorage persistent career stats hook
-    │   └── useResponsive.ts      # Multi-device breakpoint & touch detection hook
-    ├── components/
-    │   ├── ui/
-    │   │   └── SoundToggle.tsx   # Reusable procedural audio toggle button
-    │   ├── game/
-    │   │   └── CanvasContainer.tsx # WebGL canvas container with graceful fallback
-    │   ├── overlays/
-    │   │   ├── LandingOverlay.tsx  # Matchmaking, callsign, & quick chassis selector
-    │   │   ├── LobbyOverlay.tsx    # Team Cyan & Magenta rosters & launch combat
-    │   │   ├── VictoryOverlay.tsx  # Match summary, winner fanfare, & rematch
-    │   │   └── CustomizerModal.tsx # Full chassis & energy wavelength editor
-    │   └── hud/
-    │       ├── GameHud.tsx       # Root container orchestrating all match HUD modules
-    │       ├── Scoreboard.tsx    # Floating team scores, clock, & exit match
-    │       ├── GoalBanner.tsx    # Animated celebratory goal announcement
-    │       ├── RadarMap.tsx      # Top-down 2D radar projection of players & disc
-    │       ├── Speedometer.tsx   # Dynamic vertical velocity gauge
-    │       ├── ControlsGuide.tsx # Collapsible keyboard controls helper ([H])
-    │       ├── TouchControls.tsx # Mobile/tablet virtual D-Pad, altitude & throw
-    │       ├── ChatOverlay.tsx   # In-game chat toasts & team/global input
-    │       └── SpectatorBadge.tsx # Real-time spectator status indicator
-    └── lib/
-        ├── audio/
-        │   └── AudioManager.ts   # Web Audio API procedural synthesizer
-        ├── game/
-        │   ├── Constants.ts      # Arena bounds, speeds, & physics constants
-        │   ├── Physics.ts        # Zero-G kinematic simulation & collisions
-        │   └── Renderer.ts       # Three.js scene, dynamic lighting, & post-processing
-        └── network/
-            └── PeerManager.ts    # WebRTC PeerJS DataChannel manager
-```
+- `src/App.tsx` composes the screens and coordinates match actions.
+- `src/components/landing/`, `overlays/`, `hud/`, and `ui/` contain focused UI components and shared selectors.
+- `src/hooks/useArenaRuntime.ts` owns the fixed-step game loop, rendering, and network update cadence; `useFlightControls.ts`, `useArenaAudio.ts`, and `useMatchReplay.ts` isolate input, sound, and replay behavior.
+- `src/lib/game/actions.ts` applies immutable game rules; `state.ts` creates and clones state; `Physics.ts` advances simulation; `SceneObjects.ts` creates and disposes Three.js objects; `Renderer.ts` updates the scene.
+- `src/lib/network/PeerManager.ts` owns PeerJS connections, while `protocol.ts` validates peer messages.
+- `src/lib/replay/synthesize.ts` interpolates recorded frames for playback.
+- `src/types/game.ts` defines the shared game model. `src/services/leaderboardService.ts` currently returns sample standings with the current browser's stats.
+
+Run `npm run lint`, `npm test`, and `npm run build` to check types, game rules, protocol validation, and the production bundle.
 
 ---
 
@@ -349,7 +314,7 @@ Located in `src/lib/audio/AudioManager.ts`:
 
 ### Prerequisites
 
-- **Node.js**: `v18.0.0` or higher
+- **Node.js**: `v20.19.0` or later in the 20.x line, or `v22.12.0` or higher (required by Vite 8)
 - **npm** or **bun**
 - A modern WebGL-compatible browser (Chrome, Edge, Firefox, Safari)
 
@@ -360,6 +325,8 @@ Clone the repository and install dependencies:
 ```bash
 npm install
 ```
+
+For local installs through a corporate npm registry, keep the registry and its credentials in your user npm configuration. If Artifactory returns duplicated paths in package tarball URLs, add `replace-registry-host=never` to a local `.npmrc`; this file is ignored by Git. Local npm lockfiles are also ignored so registry URLs are not committed for Vercel.
 
 ### Running the Development Server
 

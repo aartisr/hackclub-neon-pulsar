@@ -1,9 +1,10 @@
+import { cn } from '../../lib/ui/cn';
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LucideTrophy, LucideFlame, LucideRefreshCw, LucideAward, 
@@ -13,12 +14,6 @@ import { CareerStats } from '../../hooks/useCareerStats';
 import { ChassisType } from '../../types/game';
 import { fetchTop10Leaderboard, LeaderboardEntry } from '../../services/leaderboardService';
 import { RankEmblem } from '../ui/RankEmblem';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 export interface GlobalLeaderboardProps {
   currentPlayerName: string;
@@ -35,10 +30,14 @@ export const GlobalLeaderboard: React.FC<GlobalLeaderboardProps> = ({
 }) => {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [sortBy, setSortBy] = useState<'victories' | 'goals' | 'winRate'>('victories');
+  const requestIdRef = useRef(0);
 
   const loadLeaderboard = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setIsLoading(true);
+    setLoadError('');
     try {
       const data = await fetchTop10Leaderboard(
         currentPlayerName,
@@ -47,16 +46,17 @@ export const GlobalLeaderboard: React.FC<GlobalLeaderboardProps> = ({
         customColor,
         sortBy
       );
-      setEntries(data);
+      if (requestId === requestIdRef.current) setEntries(data);
     } catch (e) {
-      console.error('Failed to load global leaderboard', e);
+      if (requestId === requestIdRef.current) setLoadError('Could not load standings. Try refreshing.');
     } finally {
-      setIsLoading(false);
+      if (requestId === requestIdRef.current) setIsLoading(false);
     }
   }, [currentPlayerName, careerStats, avatarShape, customColor, sortBy]);
 
   useEffect(() => {
     loadLeaderboard();
+    return () => { requestIdRef.current++; };
   }, [loadLeaderboard]);
 
   return (
@@ -69,12 +69,12 @@ export const GlobalLeaderboard: React.FC<GlobalLeaderboardProps> = ({
           </div>
           <div>
             <h3 className="text-sm font-extrabold uppercase tracking-wider text-white flex items-center gap-2">
-              Global Arena Standings
+              Arena Standings
               <span className="text-[10px] font-mono-code font-normal px-2 py-0.5 rounded-md bg-white/10 text-cyan-300">
                 TOP 10
               </span>
             </h3>
-            <p className="text-[10px] text-white/40 font-mono-code">Public Firestore Telemetry Stream</p>
+            <p className="text-[10px] text-white/40 font-mono-code">Sample standings with your local career stats</p>
           </div>
         </div>
 
@@ -84,7 +84,7 @@ export const GlobalLeaderboard: React.FC<GlobalLeaderboardProps> = ({
             <button
               onClick={() => setSortBy('victories')}
               className={cn(
-                "px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1",
+                    "min-h-11 px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1",
                 sortBy === 'victories'
                   ? "bg-amber-500 text-black shadow-[0_0_12px_rgba(245,158,11,0.5)]"
                   : "text-white/60 hover:text-white"
@@ -96,7 +96,7 @@ export const GlobalLeaderboard: React.FC<GlobalLeaderboardProps> = ({
             <button
               onClick={() => setSortBy('goals')}
               className={cn(
-                "px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1",
+                    "min-h-11 px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1",
                 sortBy === 'goals'
                   ? "bg-cyan-500 text-black shadow-[0_0_12px_rgba(6,182,212,0.5)]"
                   : "text-white/60 hover:text-white"
@@ -108,7 +108,7 @@ export const GlobalLeaderboard: React.FC<GlobalLeaderboardProps> = ({
             <button
               onClick={() => setSortBy('winRate')}
               className={cn(
-                "px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1",
+                    "min-h-11 px-2.5 py-1 rounded-lg font-bold transition-all flex items-center gap-1",
                 sortBy === 'winRate'
                   ? "bg-magenta-500 text-black shadow-[0_0_12px_rgba(217,70,239,0.5)]"
                   : "text-white/60 hover:text-white"
@@ -122,7 +122,8 @@ export const GlobalLeaderboard: React.FC<GlobalLeaderboardProps> = ({
           <button
             onClick={loadLeaderboard}
             disabled={isLoading}
-            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white disabled:opacity-40 transition-colors"
+            aria-label="Refresh standings"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white disabled:opacity-40 transition-colors"
             title="Refresh Leaderboard"
           >
             <LucideRefreshCw size={14} className={cn(isLoading && "animate-spin")} />
@@ -141,6 +142,8 @@ export const GlobalLeaderboard: React.FC<GlobalLeaderboardProps> = ({
               />
             ))}
           </div>
+        ) : loadError ? (
+          <div role="alert" className="text-center py-8 text-xs text-red-300">{loadError}</div>
         ) : entries.length === 0 ? (
           <div className="text-center py-8 text-xs text-white/40">
             No global telemetry records found.
@@ -161,7 +164,7 @@ export const GlobalLeaderboard: React.FC<GlobalLeaderboardProps> = ({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
                   className={cn(
-                    "p-3 rounded-2xl border transition-all flex items-center justify-between gap-3",
+                    "p-3 rounded-2xl border transition-all flex flex-col min-[440px]:flex-row items-stretch min-[440px]:items-center justify-between gap-2 min-[440px]:gap-3",
                     player.isCurrentPlayer
                       ? "bg-cyan-500/15 border-cyan-400/50 shadow-[0_0_20px_rgba(6,182,212,0.25)]"
                       : isTop3
@@ -170,7 +173,7 @@ export const GlobalLeaderboard: React.FC<GlobalLeaderboardProps> = ({
                   )}
                 >
                   {/* Left: Rank & Pilot Identity */}
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
                     {/* Rank Number / Medal */}
                     <div className="w-8 h-8 flex items-center justify-center font-display font-black text-sm shrink-0">
                       {player.rank === 1 ? (
@@ -185,12 +188,12 @@ export const GlobalLeaderboard: React.FC<GlobalLeaderboardProps> = ({
                     </div>
 
                     {/* Emblem & Callsign */}
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex min-w-0 items-center gap-2.5">
                       <RankEmblem tier={player.rankTier} size="sm" />
-                      <div>
+                      <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
                           <span className={cn(
-                            "text-xs font-bold uppercase tracking-tight",
+                            "block max-w-24 truncate text-xs font-bold uppercase tracking-tight min-[375px]:max-w-36",
                             player.isCurrentPlayer ? "text-cyan-300 font-extrabold" : "text-white"
                           )}>
                             {player.playerName}
@@ -217,7 +220,7 @@ export const GlobalLeaderboard: React.FC<GlobalLeaderboardProps> = ({
                   </div>
 
                   {/* Right: Career Totals Stats */}
-                  <div className="flex items-center gap-3 sm:gap-5 text-right font-mono-code text-xs tabular-nums">
+                  <div className="flex items-center justify-end gap-3 border-t border-white/10 pt-2 text-right font-mono-code text-xs tabular-nums min-[440px]:border-0 min-[440px]:pt-0 sm:gap-5">
                     <div>
                       <div className="text-[9px] text-white/40 uppercase">Wins</div>
                       <div className="font-extrabold text-amber-400">{player.victories}</div>

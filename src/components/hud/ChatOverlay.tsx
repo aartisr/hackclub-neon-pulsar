@@ -1,12 +1,8 @@
+import { cn } from '../../lib/ui/cn';
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMessage } from '../../types/game';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { LucideSend, LucideX } from 'lucide-react';
 
 export interface ChatOverlayProps {
   messages: ChatMessage[];
@@ -15,6 +11,10 @@ export interface ChatOverlayProps {
   teamOnlyChat: boolean;
   chatInput: string;
   onChangeChatInput: (text: string) => void;
+  onSendChat: () => void;
+  onCloseChat: () => void;
+  onChangeTeamOnlyChat: (teamOnly: boolean) => void;
+  isTouch: boolean;
 }
 
 export const ChatOverlay: React.FC<ChatOverlayProps> = ({
@@ -24,14 +24,23 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
   teamOnlyChat,
   chatInput,
   onChangeChatInput,
+  onSendChat,
+  onCloseChat,
+  onChangeTeamOnlyChat,
+  isTouch,
 }) => {
   const visibleMessages = messages
     .filter(msg => !msg.teamOnly || (msg.teamOnly && msg.team === myTeam))
-    .slice(-4);
+    .slice(isTouch ? -2 : -4);
 
   return (
-    <div className="absolute bottom-20 left-4 sm:left-6 w-72 sm:w-80 space-y-2 pointer-events-none z-20">
-      <div className="flex flex-col gap-2 mb-2">
+    <div className={cn(
+      'absolute z-20 space-y-2 pointer-events-none max-w-[calc(100vw-2rem)]',
+      isTouch
+        ? isChatOpen ? 'bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 right-4' : 'bottom-[calc(11rem+env(safe-area-inset-bottom))] left-4 w-64'
+        : 'bottom-20 left-4 sm:left-6 w-72 sm:w-80'
+    )}>
+      <div aria-live="polite" className="flex flex-col gap-2 mb-2">
         <AnimatePresence>
           {visibleMessages.map((msg, idx) => (
             <motion.div
@@ -70,7 +79,16 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
           animate={{ opacity: 1, y: 0 }}
           className="pointer-events-auto"
         >
-          <div className="relative">
+          {isTouch && (
+            <div className="mb-2 flex items-center justify-between rounded-xl border border-white/15 bg-black/85 p-1.5 text-xs text-white">
+              <div className="flex gap-1" aria-label="Chat audience">
+                <button type="button" onClick={() => onChangeTeamOnlyChat(false)} aria-pressed={!teamOnlyChat} className={cn('min-h-10 rounded-lg px-3 font-bold', !teamOnlyChat ? 'bg-cyan-400 text-black' : 'text-white/70')}>Everyone</button>
+                <button type="button" onClick={() => onChangeTeamOnlyChat(true)} aria-pressed={teamOnlyChat} className={cn('min-h-10 rounded-lg px-3 font-bold', teamOnlyChat ? 'bg-cyan-400 text-black' : 'text-white/70')}>Team</button>
+              </div>
+              <button type="button" onClick={onCloseChat} aria-label="Close chat" className="flex h-10 w-10 items-center justify-center rounded-lg text-white/70"><LucideX size={18} /></button>
+            </div>
+          )}
+          <div className="relative flex gap-2">
             <div className={cn(
               "absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-widest pointer-events-none",
               teamOnlyChat ? (myTeam === 1 ? "text-cyan-400" : "text-magenta-400") : "text-white/40"
@@ -82,14 +100,21 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
               type="text"
               value={chatInput}
               onChange={(e) => onChangeChatInput(e.target.value)}
+              onKeyDown={(event) => {
+                event.stopPropagation();
+                if (event.key === 'Enter') { event.preventDefault(); onSendChat(); }
+                if (event.key === 'Escape') onCloseChat();
+              }}
+              maxLength={240}
               placeholder="Press Enter to send, ESC to cancel..."
               className={cn(
-                "w-full bg-black/80 border rounded-xl py-2 pl-12 pr-3 text-xs outline-none transition-all text-white",
+                "min-w-0 flex-1 bg-black/90 border rounded-xl py-3 pl-12 pr-3 text-base sm:text-sm outline-none transition-all text-white",
                 teamOnlyChat 
                   ? (myTeam === 1 ? "border-cyan-400 focus:border-cyan-300" : "border-magenta-400 focus:border-magenta-300")
                   : "border-white/20 focus:border-white/50"
               )}
             />
+            {isTouch && <button type="button" onClick={onSendChat} disabled={!chatInput.trim()} aria-label="Send chat message" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-cyan-400 text-black disabled:opacity-40"><LucideSend size={19} /></button>}
           </div>
         </motion.div>
       )}

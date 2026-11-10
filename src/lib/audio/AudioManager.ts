@@ -215,7 +215,11 @@ export class AudioManager {
   }
 
   public stop() {
-    if (this.rhythmInterval) clearTimeout(this.rhythmInterval);
-    this.ctx?.close();
+    if (this.rhythmInterval !== null) clearTimeout(this.rhythmInterval);
+    this.rhythmInterval = null;
+    const context = this.ctx;
+    this.ctx = null;
+    this.isStarted = false;
+    if (context && context.state !== 'closed') void context.close().catch(() => {});
   }
 }

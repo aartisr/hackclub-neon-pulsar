@@ -1,11 +1,12 @@
-import { useState, useRef, useCallback } from 'react';
-import { GameState, ReplayFrame, ReplayPlayerFrame, DEFAULT_LIGHT_PROBES } from '../types/game';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { GameState, ReplayFrame, ReplayPlayerFrame } from '../types/game';
+import { synthesizeReplayState } from '../lib/replay/synthesize';
 
 export type CameraMode = 'orbit' | 'disc' | 'player';
 
 export function useMatchReplay() {
   const recordingBufferRef = useRef<ReplayFrame[]>([]);
-  const frameCountRef = useRef<number>(0);
+  const lastRecordedTimeRef = useRef<number>(-Infinity);
 
   const [replayFrames, setReplayFrames] = useState<ReplayFrame[]>([]);
   const [isReplaying, setIsReplaying] = useState(false);
@@ -18,9 +19,9 @@ export function useMatchReplay() {
   const recordFrame = useCallback((state: GameState) => {
     if (state.status !== 'playing') return;
 
-    frameCountRef.current += 1;
-    // Record at 30 FPS (every 2 frames at 60 FPS) for memory efficiency & performance
-    if (frameCountRef.current % 2 !== 0) return;
+    // Match time is authoritative; browser refresh rates can vary widely.
+    if (state.time - lastRecordedTimeRef.current < 1 / 30) return;
+    lastRecordedTimeRef.current = state.time;
 
     const playersSnapshot: Record<string, ReplayPlayerFrame> = {};
     for (const id in state.players) {
@@ -46,11 +47,12 @@ export function useMatchReplay() {
     };
 
     recordingBufferRef.current.push(frame);
+    if (recordingBufferRef.current.length > 5400) recordingBufferRef.current.shift();
   }, []);
 
   const clearRecording = useCallback(() => {
     recordingBufferRef.current = [];
-    frameCountRef.current = 0;
+    lastRecordedTimeRef.current = -Infinity;
     setReplayFrames([]);
     setIsReplaying(false);
     setCurrentReplayTime(0);
@@ -78,8 +80,11 @@ export function useMatchReplay() {
   }, []);
 
   const togglePlayPause = useCallback(() => {
-    setIsPlaying(prev => !prev);
-  }, []);
+    if (!isPlaying && replayFrames.length > 0 && currentReplayTime >= replayFrames[replayFrames.length - 1].time) {
+      setCurrentReplayTime(replayFrames[0].time);
+    }
+    setIsPlaying(!isPlaying);
+  }, [currentReplayTime, isPlaying, replayFrames]);
 
   const seekToTime = useCallback((time: number) => {
     if (replayFrames.length === 0) return;
@@ -92,108 +97,21 @@ export function useMatchReplay() {
   const advanceReplayTime = useCallback((deltaSeconds: number) => {
     if (!isReplaying || !isPlaying || replayFrames.length === 0) return;
 
-    const startTime = replayFrames[0].time;
     const endTime = replayFrames[replayFrames.length - 1].time;
 
-    setCurrentReplayTime(prev => {
-      const next = prev + deltaSeconds * playbackSpeed;
-      if (next >= endTime) {
-        setIsPlaying(false); // Pause at end of replay
-        return endTime;
-      }
-      return next;
-    });
+    setCurrentReplayTime(prev => Math.min(endTime, prev + deltaSeconds * playbackSpeed));
   }, [isReplaying, isPlaying, playbackSpeed, replayFrames]);
 
-  // Construct a interpolated GameState for the given replay timestamp
-  const getSynthesizedGameState = useCallback((timestamp: number): GameState | null => {
-    if (replayFrames.length === 0) return null;
-
-    const startTime = replayFrames[0].time;
-    const endTime = replayFrames[replayFrames.length - 1].time;
-    const clampedTime = Math.max(startTime, Math.min(endTime, timestamp));
-
-    // Find bounding frames
-    let prevFrame = replayFrames[0];
-    let nextFrame = replayFrames[replayFrames.length - 1];
-
-    for (let i = 0; i < replayFrames.length - 1; i++) {
-      if (replayFrames[i].time <= clampedTime && replayFrames[i + 1].time >= clampedTime) {
-        prevFrame = replayFrames[i];
-        nextFrame = replayFrames[i + 1];
-        break;
-      }
+  useEffect(() => {
+    if (isReplaying && isPlaying && replayFrames.length > 0 && currentReplayTime >= replayFrames[replayFrames.length - 1].time) {
+      setIsPlaying(false);
     }
+  }, [currentReplayTime, isPlaying, isReplaying, replayFrames]);
 
-    const duration = nextFrame.time - prevFrame.time;
-    const alpha = duration > 0 ? (clampedTime - prevFrame.time) / duration : 0;
-
-    // Lerp disc position
-    const discPos: [number, number, number] = [
-      prevFrame.discPosition[0] + (nextFrame.discPosition[0] - prevFrame.discPosition[0]) * alpha,
-      prevFrame.discPosition[1] + (nextFrame.discPosition[1] - prevFrame.discPosition[1]) * alpha,
-      prevFrame.discPosition[2] + (nextFrame.discPosition[2] - prevFrame.discPosition[2]) * alpha,
-    ];
-
-    // Lerp player positions
-    const interpolatedPlayers: Record<string, any> = {};
-    const allPlayerIds = new Set([
-      ...Object.keys(prevFrame.players),
-      ...Object.keys(nextFrame.players),
-    ]);
-
-    allPlayerIds.forEach(id => {
-      const pPrev = prevFrame.players[id];
-      const pNext = nextFrame.players[id];
-
-      if (pPrev && pNext) {
-        interpolatedPlayers[id] = {
-          id: pPrev.id,
-          name: pPrev.name,
-          team: pPrev.team,
-          position: [
-            pPrev.position[0] + (pNext.position[0] - pPrev.position[0]) * alpha,
-            pPrev.position[1] + (pNext.position[1] - pPrev.position[1]) * alpha,
-            pPrev.position[2] + (pNext.position[2] - pPrev.position[2]) * alpha,
-          ],
-          rotation: [0, 0, 0],
-          ready: true,
-          isSpectator: false,
-          effects: [],
-          avatarShape: pPrev.avatarShape || 'capsule',
-          customColor: pPrev.customColor || '#06b6d4',
-        };
-      } else if (pNext) {
-        interpolatedPlayers[id] = {
-          id: pNext.id,
-          name: pNext.name,
-          team: pNext.team,
-          position: [...pNext.position],
-          rotation: [0, 0, 0],
-          ready: true,
-          isSpectator: false,
-          effects: [],
-          avatarShape: pNext.avatarShape || 'capsule',
-          customColor: pNext.customColor || '#06b6d4',
-        };
-      }
-    });
-
-    return {
-      players: interpolatedPlayers,
-      disc: {
-        position: discPos,
-        velocity: prevFrame.discVelocity,
-        ownerId: null,
-      },
-      score: prevFrame.score,
-      time: clampedTime,
-      status: 'playing',
-      messages: [],
-      powerUps: [],
-      lightProbes: DEFAULT_LIGHT_PROBES,
-    };
-  }, [replayFrames]);
+  const getSynthesizedGameState = useCallback(
+    (timestamp: number) => synthesizeReplayState(replayFrames, timestamp),
+    [replayFrames]
+  );
 
   const maxReplayTime = replayFrames.length > 0 ? replayFrames[replayFrames.length - 1].time : 0;
   const minReplayTime = replayFrames.length > 0 ? replayFrames[0].time : 0;

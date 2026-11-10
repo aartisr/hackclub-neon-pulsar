@@ -1,12 +1,7 @@
+import { cn } from '../../lib/ui/cn';
 import React from 'react';
 import { motion } from 'framer-motion';
 import { PlayerState, DiscState } from '../../types/game';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
 
 export interface RadarMapProps {
   players: Record<string, PlayerState>;
