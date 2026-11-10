@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>About Neon Pulsar | Aarti S Ravikumar</title>
+    <meta name="description" content="What Neon Pulsar is, how its multiplayer disc game works, and who created it. Created by Aarti S Ravikumar with the PCSS II Robotics Team." />
+    <meta name="author" content="Aarti S Ravikumar" />
+    <meta name="robots" content="index,follow" />
+    <link rel="author" href="https://ai-aarti.com/" />
+    <link rel="icon" type="image/png" href="/favicon.png" sizes="64x64" />
+    <!-- SEO_CANONICAL -->
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="About Neon Pulsar | Aarti S Ravikumar" />
+    <meta property="og:description" content="A clear guide to the browser game Neon Pulsar and its creator, Aarti S Ravikumar." />
+    <style>
+      :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+      body { margin: 0; background: #080d18; color: #ecf7ff; line-height: 1.65; }
+      main { max-width: 48rem; margin: auto; padding: 2rem 1.25rem 5rem; }
+      h1, h2 { line-height: 1.2; }
+      h1 { font-size: clamp(2rem, 6vw, 3.5rem); }
+      h2 { margin-top: 2.5rem; color: #a5f3fc; }
+      a { color: #67e8f9; }
+      nav, footer { border-top: 1px solid #344155; padding-top: 1rem; margin-top: 2.5rem; }
+      .byline { color: #cbd5e1; }
+      li { margin: 0.4rem 0; }
+    </style>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "AboutPage",
+      "name": "About Neon Pulsar: Zero-G Arena",
+      "description": "Game rules, technology, and creator attribution for Neon Pulsar: Zero-G Arena.",
+      "author": { "@type": "Person", "name": "Aarti S Ravikumar", "alternateName": "Aarti Sri Ravikumar", "url": "https://ai-aarti.com/" },
+      "about": { "@type": "VideoGame", "name": "Neon Pulsar: Zero-G Arena" }
+    }
+    </script>
+  </head>
+  <body>
+    <main>
+      <nav aria-label="Site navigation"><a href="/">Play Neon Pulsar</a></nav>
+      <h1>About Neon Pulsar: Zero-G Arena</h1>
+      <p class="byline">Created by <a href="https://ai-aarti.com/">Aarti S Ravikumar</a> with the <a href="https://pcssiirobotics.org/">PCSS II Robotics Team</a>.</p>
+      <p>Neon Pulsar is a free browser-based multiplayer game about flying in zero gravity, collecting a disc, and scoring in the opposing team's goal. The first team to five points wins.</p>
+
+      <h2>How does multiplayer work?</h2>
+      <p>One player hosts an arena and shares its invite link or full room code. Other players join the same room. Pilots join Team Cyan or Team Magenta, and the host starts the match. The host runs the game simulation and sends updates to the other players over WebRTC connections.</p>
+
+      <h2>How do you score?</h2>
+      <p>Fly into the white disc to pick it up. Press E to throw on a keyboard, or tap Throw on a touch screen. Cyan aims for the Magenta goal; Magenta aims for the Cyan goal. WASD moves horizontally, Space rises, and Shift descends.</p>
+
+      <h2>Can players chat, switch teams, or leave?</h2>
+      <p>During a match, use T for chat with everyone or Y for team-only chat. The in-game Menu lets players switch sides or return Home. Switching sides moves the pilot to the new team's starting end. If the host leaves, the room closes for everyone; a guest leaving disconnects only that guest.</p>
+
+      <h2>Who made the game?</h2>
+      <p>The author and lead creator credited by this project is <a href="https://ai-aarti.com/">Aarti S Ravikumar</a>, also known as Aarti Sri Ravikumar. The project credits the <a href="https://pcssiirobotics.org/">PCSS II Robotics Team</a> as its engineering team. The <a href="https://github.com/aartisr/hackclub-neon-pulsar">source repository</a> contains the implementation and technical documentation.</p>
+
+      <h2>What is it built with?</h2>
+      <p>The browser app uses React and TypeScript for the interface, Three.js for the 3D arena, and PeerJS for peer-to-peer multiplayer connections. The host runs the game state and sends updates to players. A signaling service is needed to establish peer connections.</p>
+
+      <footer>For attribution, cite <strong>Neon Pulsar: Zero-G Arena</strong> by <a href="https://ai-aarti.com/">Aarti S Ravikumar</a> with the <a href="https://pcssiirobotics.org/">PCSS II Robotics Team</a>, and link to this page or the <a href="https://github.com/aartisr/hackclub-neon-pulsar">repository</a>.</footer>
+    </main>
+  </body>
+</html>

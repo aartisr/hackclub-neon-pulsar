@@ -34,9 +34,12 @@ export function applyGameAction(state: GameState, action: GameAction, peerId: st
       if (next.disc.ownerId === peerId) next.disc.ownerId = null;
       break;
     case 'SWITCH_TEAM':
-      if (!player || state.status !== 'lobby') return state;
+      if (!player || (state.status !== 'lobby' && state.status !== 'playing')) return state;
+      if (player.team === action.team) return state;
+      if (next.disc.ownerId === peerId) PhysicsEngine.resetDisc(next);
       player.team = action.team;
-      player.position[2] = action.team === 1 ? 25 : -25;
+      player.position = [0, 0, action.team === 1 ? 25 : -25];
+      player.effects = [];
       break;
     case 'READY':
       if (!player) return state;
@@ -77,9 +80,11 @@ export function applyGameAction(state: GameState, action: GameAction, peerId: st
     case 'START_GAME':
       if (state.status === 'playing') return state;
       next.status = 'playing';
+      next.time = 0;
       for (const participant of Object.values(next.players)) {
         participant.isSpectator = false;
         participant.effects = [];
+        participant.position = [0, 0, participant.team === 1 ? 25 : -25];
       }
       next.powerUps = [];
       PhysicsEngine.resetDisc(next, true);

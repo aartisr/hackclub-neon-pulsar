@@ -14,6 +14,7 @@ export interface ChatOverlayProps {
   onSendChat: () => void;
   onCloseChat: () => void;
   onChangeTeamOnlyChat: (teamOnly: boolean) => void;
+  onOpenChat: () => void;
   isTouch: boolean;
 }
 
@@ -27,6 +28,7 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
   onSendChat,
   onCloseChat,
   onChangeTeamOnlyChat,
+  onOpenChat,
   isTouch,
 }) => {
   const visibleMessages = messages
@@ -72,6 +74,12 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
         </AnimatePresence>
       </div>
 
+      {!isChatOpen && !isTouch && (
+        <button type="button" onClick={onOpenChat} className="pointer-events-auto rounded-xl border border-cyan-400/40 bg-black/85 px-3 py-2 text-xs font-bold text-cyan-200 shadow-lg hover:bg-cyan-950" aria-label="Open chat">
+          Chat with everyone (T) · Team chat (Y)
+        </button>
+      )}
+
       {isChatOpen && (
         <motion.div
           key="chat-input-container"
@@ -79,15 +87,13 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
           animate={{ opacity: 1, y: 0 }}
           className="pointer-events-auto"
         >
-          {isTouch && (
-            <div className="mb-2 flex items-center justify-between rounded-xl border border-white/15 bg-black/85 p-1.5 text-xs text-white">
+          <div className="mb-2 flex items-center justify-between rounded-xl border border-white/15 bg-black/85 p-1.5 text-xs text-white">
               <div className="flex gap-1" aria-label="Chat audience">
                 <button type="button" onClick={() => onChangeTeamOnlyChat(false)} aria-pressed={!teamOnlyChat} className={cn('min-h-10 rounded-lg px-3 font-bold', !teamOnlyChat ? 'bg-cyan-400 text-black' : 'text-white/70')}>Everyone</button>
                 <button type="button" onClick={() => onChangeTeamOnlyChat(true)} aria-pressed={teamOnlyChat} className={cn('min-h-10 rounded-lg px-3 font-bold', teamOnlyChat ? 'bg-cyan-400 text-black' : 'text-white/70')}>Team</button>
               </div>
               <button type="button" onClick={onCloseChat} aria-label="Close chat" className="flex h-10 w-10 items-center justify-center rounded-lg text-white/70"><LucideX size={18} /></button>
             </div>
-          )}
           <div className="relative flex gap-2">
             <div className={cn(
               "absolute left-3 top-1/2 -translate-y-1/2 text-[9px] font-black uppercase tracking-widest pointer-events-none",
@@ -114,7 +120,7 @@ export const ChatOverlay: React.FC<ChatOverlayProps> = ({
                   : "border-white/20 focus:border-white/50"
               )}
             />
-            {isTouch && <button type="button" onClick={onSendChat} disabled={!chatInput.trim()} aria-label="Send chat message" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-cyan-400 text-black disabled:opacity-40"><LucideSend size={19} /></button>}
+            <button type="button" onClick={onSendChat} disabled={!chatInput.trim()} aria-label="Send chat message" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-cyan-400 text-black disabled:opacity-40"><LucideSend size={19} /></button>
           </div>
         </motion.div>
       )}

@@ -56,7 +56,7 @@ export function MatchmakingPanel({ roomCode, onChangeRoomCode, onQuickMatch, onH
           <div className="font-black text-xs tracking-wider flex items-center gap-2">
             QUICK MATCH <span className="text-[9px] bg-black text-cyan-300 font-mono-code px-1.5 py-0.2 rounded font-black">INSTANT PLAY</span>
           </div>
-          <div className="text-[10px] opacity-80 font-bold uppercase">Random Drone Loadout & Instant Arena Launch</div>
+          <div className="text-[10px] opacity-80 font-bold uppercase">Start solo now; friends can join next round</div>
         </div>
       </button>
 
@@ -69,7 +69,7 @@ export function MatchmakingPanel({ roomCode, onChangeRoomCode, onQuickMatch, onH
         >
           <LucideUsers size={20} className="mb-1 text-black group-hover:scale-110 transition-transform" />
           <span className="text-xs font-black">Host Arena</span>
-          <span className="text-[9px] font-medium opacity-70">Solo or Multiplayer</span>
+          <span className="text-[9px] font-medium opacity-70">Create a room to invite friends</span>
         </button>
         <button
           type="button"
@@ -155,7 +155,7 @@ export function MatchmakingPanel({ roomCode, onChangeRoomCode, onQuickMatch, onH
               <div><strong className="text-cyan-400">T / Y:</strong> Global / Team Chat</div>
             </div>
             <p className="text-[11px] text-white/50 pt-1 border-t border-white/5">
-              Fly into the disc to gain possession. Score in the opposing team's glowing portal. First to 5 points conquers the arena!
+              One player hosts and shares the invite link. Others join that room. Fly into the white disc to pick it up; press E to throw into the other team's colored goal. First to 5 wins.
             </p>
           </motion.div>
         )}

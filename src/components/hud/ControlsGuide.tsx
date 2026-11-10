@@ -22,7 +22,7 @@ export const ControlsGuide: React.FC<ControlsGuideProps> = ({ isVisible, onToggl
           <div className="w-px h-4 bg-white/15" />
           <div className="flex items-center gap-2">
             <span className="font-mono-code bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-bold">E</span>
-            <span className="text-[10px] sm:text-[11px] text-white/50">Throw</span>
+            <span className="text-[10px] sm:text-[11px] text-white/50">Throw when carrying disc</span>
           </div>
           <div className="w-px h-4 bg-white/15" />
           <button

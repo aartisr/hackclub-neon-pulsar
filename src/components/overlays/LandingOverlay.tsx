@@ -72,6 +72,9 @@ export const LandingOverlay: React.FC<LandingOverlayProps> = ({
           <p className="text-white/50 text-xs sm:text-sm mt-1">
             Zero-G Tactical Disc Arena <span className="text-white/20">·</span> WebRTC P2P
           </p>
+          <p className="mt-2 max-w-sm text-xs leading-relaxed text-white/70">
+            Host a room, collect the disc, and score in the other team's goal. First to five wins.
+          </p>
         </div>
 
         {/* Navigation Tabs */}

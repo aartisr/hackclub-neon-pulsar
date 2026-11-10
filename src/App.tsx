@@ -57,6 +57,7 @@ export default function App() {
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState('');
   const [showControlsHud, setShowControlsHud] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Responsive device detection
   const { isTouch } = useResponsive();
@@ -101,9 +102,14 @@ export default function App() {
     if (action.type === 'JOIN') {
       delete inputsRef.current[peerId];
     }
+    if (action.type === 'SWITCH_TEAM') {
+      inputsRef.current[peerId] = { x: 0, y: 0, z: 0, jump: false, dash: false };
+    }
     const next = applyGameAction(gameStateRef.current, action, peerId);
     gameStateRef.current = next;
     setGameState(next);
+    // Deliver lobby changes and chat immediately, even when the physics loop is idle.
+    peerRef.current?.broadcastState(next);
   }, []);
 
   const createPeerManager = useCallback(() => {
@@ -144,12 +150,14 @@ export default function App() {
     return () => peerRef.current?.disconnect();
   }, [createPeerManager]);
 
-  // Send lobby changes as players join or switch teams.
   useEffect(() => {
-    if (isHost && gameState.status === 'lobby') {
-      peerRef.current?.broadcastState(gameState);
-    }
-  }, [gameState, isHost]);
+    if (!isMenuOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsMenuOpen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [isMenuOpen]);
 
   // Keyboard controls
   const triggerThrow = useCallback(() => {
@@ -173,10 +181,11 @@ export default function App() {
   }, [chatInput, teamOnlyChat]);
 
   const localInputRef = useFlightControls({
-    enabled: isJoined && gameState.status === 'playing' && !isReplaying && !showCustomizer,
+    enabled: isJoined && gameState.status === 'playing' && !isReplaying && !showCustomizer && !isMenuOpen,
     isChatOpen,
     onThrow: triggerThrow,
     onToggleGuide: () => setShowControlsHud(value => !value),
+    onOpenMenu: () => setIsMenuOpen(true),
     onOpenChat: (teamOnly) => {
       setTeamOnlyChat(teamOnly);
       setIsChatOpen(true);
@@ -295,6 +304,8 @@ export default function App() {
 
   const handleLeave = () => {
     sessionEpochRef.current++;
+    setIsMenuOpen(false);
+    setIsChatOpen(false);
     setJoining(false);
     setIsJoined(false);
     setIsHost(false);
@@ -334,6 +345,7 @@ export default function App() {
   };
 
   const handleSwitchTeam = (team: 1 | 2) => {
+    setIsMenuOpen(false);
     if (isHost) {
       handleAction({ type: 'SWITCH_TEAM', team }, myId);
     } else {
@@ -448,13 +460,21 @@ export default function App() {
         <GameHud
           gameState={gameState}
           myId={myId}
+          isHost={isHost}
           isTouch={isTouch}
+          isMenuOpen={isMenuOpen}
           showControlsHud={showControlsHud}
           goalBanner={goalBanner}
           isChatOpen={isChatOpen}
           teamOnlyChat={teamOnlyChat}
           chatInput={chatInput}
           onLeaveMatch={handleLeave}
+          onToggleMenu={() => {
+            setIsChatOpen(false);
+            setIsMenuOpen(value => !value);
+          }}
+          onCloseMenu={() => setIsMenuOpen(false)}
+          onSwitchTeam={handleSwitchTeam}
           onToggleControlsHud={() => setShowControlsHud(prev => !prev)}
           onChangeChatInput={setChatInput}
           onMoveDirection={(axis, val) => {

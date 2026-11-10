@@ -9,6 +9,20 @@ A 3D multiplayer disc combat sport built for the browser. Featuring zero-gravity
 - **Author & Lead Creator**: [Aarti S Ravikumar](https://ai-aarti.com)
 - **Official Repository**: [https://github.com/aartisr/hackclub-neon-pulsar.git](https://github.com/aartisr/hackclub-neon-pulsar.git)
 
+For attribution, cite **Neon Pulsar: Zero-G Arena** by **Aarti S Ravikumar** (also known as Aarti Sri Ravikumar) with the **PCSS II Robotics Team**, and link to the game or this repository. The public [About and credits](public/about.html) page gives a concise, crawlable project description and creator credit.
+
+The [GitHub Pages guide](docs/index.html) and [GitHub Wiki drafts](wiki/Home.md) provide readable game documentation. Both link back to the [PCSS II Robotics Team main website](https://pcssiirobotics.org/), as well as the author portfolio and source repository. To publish Pages, push `docs/` and select **Settings → Pages → Deploy from a branch → main /docs**. To publish the Wiki, enable Wikis in repository settings, create its first Home page, clone `https://github.com/aartisr/hackclub-neon-pulsar.wiki.git`, then copy the files from `wiki/`, commit, and push. The Wiki is a separate Git repository; adding `wiki/` to this source repository alone does not publish it.
+
+Production builds use `SITE_URL` or Vercel's `VERCEL_PROJECT_PRODUCTION_URL` to generate matching canonical URLs, `robots.txt`, and `sitemap.xml`. Set `SITE_URL` to the public production origin when deploying elsewhere. If neither is available, the build omits canonical URLs and the sitemap instead of publishing an unverified address. Search results and AI citations remain at the discretion of each service.
+
+### Submit published URLs with IndexNow
+
+1. Run `npm run indexnow:key` to generate a key. Set `INDEXNOW_KEY` to that value in the production build environment and in your ignored `.env.local`. Set `SITE_URL` to the public HTTPS origin in `.env.local` (for example, `https://game.example.com`).
+2. Deploy the site. The build publishes `/<key>.txt` and a sitemap for the production domain. Confirm both are reachable before submitting.
+3. Run `npm run indexnow:submit -- --dry-run` to inspect the live sitemap URLs, then `npm run indexnow:submit` to notify IndexNow.
+
+The submission command is manual and sends every URL currently in the live sitemap. Use it after the initial deployment or a site-wide update; for routine changes, IndexNow recommends notifying only changed URLs. An HTTP 200 or 202 acknowledges receipt, not indexing, and IndexNow does not submit to Google Search. See the [IndexNow protocol](https://www.indexnow.org/documentation).
+
 ---
 
 ## Table of Contents
@@ -61,7 +75,7 @@ A 3D multiplayer disc combat sport built for the browser. Featuring zero-gravity
    - PeerJS uses a signaling service to establish the connection; match data then travels over WebRTC DataChannels.
 4. **Combat Lobby**:
    - In the lobby, pilots are automatically assigned to **Team Cyan** or **Team Magenta**.
-   - The host initiates the combat simulation once pilots are ready.
+   - The host presses **Start Match** when everyone has joined and chosen a team.
 
 ---
 
@@ -100,7 +114,7 @@ Pilots operate in six degrees of freedom within zero-G:
 | `T` | **Global Chat** | Open open-frequency broadcast chat to all players |
 | `Y` | **Team Chat** | Open team chat delivered only to teammates |
 | `ENTER` | **Send Chat** | Transmit text and dismiss chat focus |
-| `ESC` | **Dismiss HUD** | Close open menus/chat overlays |
+| `ESC` | **Game Menu** | Open the game menu; press again to close it. Closes chat when typing. |
 
 ---
 
@@ -111,9 +125,10 @@ Pilots operate in six degrees of freedom within zero-G:
 - **Disc Throw**: Press `E` while in possession to launch the disc along your forward trajectory.
 - **Scoring**:
   - Launch the disc into the opponent's goal portal (centered at each end of the arena: `|X| < 5m` and `|Y| < 5m`).
-  - Scoring in the positive Z net awards a point to **Team Cyan**.
-  - Scoring in the negative Z net awards a point to **Team Magenta**.
+  - **Team Cyan** starts at the positive Z end and scores in the **Magenta** portal at negative Z.
+  - **Team Magenta** starts at the negative Z end and scores in the **Cyan** portal at positive Z.
 - **Victory Condition**: First team to score **5 points** conquers the arena. A victory fanfare triggers with custom celebratory confetti, and the host can initiate an instant rematch.
+- **Switch Sides or Leave**: Open **Menu** during a match to join the other team or choose **Home · Leave Match**. Switching sides moves you to your new team's starting end and returns the disc to center if you were carrying it. Home returns you to the main screen; if the host leaves, the room closes for everyone.
 
 ---
 

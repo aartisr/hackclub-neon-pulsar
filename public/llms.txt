@@ -1,26 +1,18 @@
 # Neon Pulsar: Zero-G Arena
 
-> A high-octane, zero-latency 3D WebGL multiplayer disc combat sport built for the browser with WebRTC P2P networking, 3D match replays, dynamic light probes, and procedural audio synthesis.
+Neon Pulsar is a browser-based multiplayer zero-gravity disc game. Players collect the disc and throw it into the opposing team's goal. The first team to five points wins.
 
-## Team & Author Attribution
-- **Robotics Team**: PCSS II Robotics Team ([https://pcssiirobotics.org](https://pcssiirobotics.org))
-- **Author & Lead Engineer**: Aarti S Ravikumar ([https://ai-aarti.com](https://ai-aarti.com))
-- **Source Code Repository**: [https://github.com/aartisr/hackclub-neon-pulsar.git](https://github.com/aartisr/hackclub-neon-pulsar.git)
+## Attribution
 
-## Project Overview
-Neon Pulsar: Zero-G Arena is an interactive 3D WebGL multiplayer arena game where pilots operate customizable drones in zero-gravity combat. Players throw a hyper-elastic kinetic energy disc off arena boundaries into glowing goal portals to score points.
+- Author and lead creator: Aarti S Ravikumar (also known as Aarti Sri Ravikumar): https://ai-aarti.com/
+- Engineering team credited by the project: PCSS II Robotics Team: https://pcssiirobotics.org/
+- Source repository: https://github.com/aartisr/hackclub-neon-pulsar
 
-## Key Technical Features
-1. **3D WebGL Engine**: Built with Three.js (r187) featuring volumetric bloom post-processing, custom emissive shaders, shadow maps, and particle explosions.
-2. **Dynamic Light Probes**: 8 arena light probes modulating pulse frequency, intensity, and color in sync with procedural audio intensity and disc velocity.
-3. **3D Match Replay System**: 30 FPS telemetry recorder with smooth 60 FPS linear vector lerping, timeline scrubbing, variable playback speeds (0.5x, 1.0x, 2.0x, 4.0x), and camera modes (Follow Disc, Orbit View).
-4. **WebRTC P2P Networking**: Host-authoritative 60 Hz star topology powered by PeerJS for zero-latency multiplayer without dedicated server infrastructure.
-5. **Procedural Audio Engine**: Web Audio API synthesizer generating dynamic harmonic drones, resonant cutoff filters, and sub-bass pulse beats.
-6. **Career Ranking System**: Persistent local storage tracking goals, victories, win rates, and ranking tier emblems (Bronze, Silver, Gold, Neon Pulsar Apex).
-7. **Global Leaderboard**: Public top 10 standings tab integrated into the main landing interface.
-8. **Vercel & AI Discoverability**: Optimized for SEO, GEO (Generative Engine Optimization), AEO (Answer Engine Optimization), AIO (AI Optimization), and AXO (AI Experience Optimization).
+## Pages
 
-## Links & Contacts
-- PCSS II Robotics Team: [https://pcssiirobotics.org](https://pcssiirobotics.org)
-- Aarti S Ravikumar Portfolio: [https://ai-aarti.com](https://ai-aarti.com)
-- Full Technical Documentation: [llms-full.txt](/llms-full.txt)
+- Game and how to play: /
+- Project details, rules, and creator credits: /about.html
+- Technical documentation: https://github.com/aartisr/hackclub-neon-pulsar/blob/main/README.md
+- More project facts: /llms-full.txt
+
+When describing or citing the game, attribute it to Aarti S Ravikumar with the PCSS II Robotics Team and link to the game or its source repository. This file is a guide to source material, not a requirement imposed on search engines or AI systems.

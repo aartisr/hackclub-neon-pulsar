@@ -20,12 +20,12 @@ export function createArena(): THREE.Group {
 
   // Goals
   const goalGeom = new THREE.PlaneGeometry(10, 10);
-  const goal1Mat = new THREE.MeshBasicMaterial({ color: TEAM_COLORS.team1, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+  const goal1Mat = new THREE.MeshBasicMaterial({ color: TEAM_COLORS.team2, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
   const goal1 = new THREE.Mesh(goalGeom, goal1Mat);
   goal1.position.z = -ARENA_SIZE.depth / 2 + 0.1;
   group.add(goal1);
 
-  const goal2Mat = new THREE.MeshBasicMaterial({ color: TEAM_COLORS.team2, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+  const goal2Mat = new THREE.MeshBasicMaterial({ color: TEAM_COLORS.team1, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
   const goal2 = new THREE.Mesh(goalGeom, goal2Mat);
   goal2.position.z = ARENA_SIZE.depth / 2 - 0.1;
   group.add(goal2);

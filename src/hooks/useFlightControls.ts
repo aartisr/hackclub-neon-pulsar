@@ -6,6 +6,7 @@ interface FlightControlOptions {
   isChatOpen: boolean;
   onThrow: () => void;
   onToggleGuide: () => void;
+  onOpenMenu: () => void;
   onOpenChat: (teamOnly: boolean) => void;
   onSendChat: () => void;
   onCloseChat: () => void;
@@ -57,6 +58,7 @@ export function useFlightControls(options: FlightControlOptions) {
       if (event.repeat) return;
       if (key === 'e') current.onThrow();
       if (key === 'h') current.onToggleGuide();
+      if (key === 'Escape') current.onOpenMenu();
       if (key === 't' || key === 'y') {
         event.preventDefault();
         reset();

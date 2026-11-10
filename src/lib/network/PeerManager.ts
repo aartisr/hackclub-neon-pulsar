@@ -15,13 +15,14 @@ export class PeerManager {
   constructor(
     onStateUpdate: (state: GameState) => void,
     onAction: (action: GameAction, peerId: string) => void,
-    onConnectionLost?: () => void
+    onConnectionLost?: () => void,
+    peer?: Peer
   ) {
     this.onStateUpdate = onStateUpdate;
     this.onAction = onAction;
     this.onConnectionLost = onConnectionLost;
     // Generate a clean ID or let PeerJS generate one
-    this.peer = new Peer();
+    this.peer = peer ?? new Peer();
     
     this.peer.on('open', (id) => {
       this.myId = id;

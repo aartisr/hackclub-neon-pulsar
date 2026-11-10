@@ -1,27 +1,2 @@
 User-agent: *
 Allow: /
-
-# Generative AI & Search Engine Optimization Indexing (SEO, GEO, AEO, AIO, AXO)
-User-agent: GPTBot
-Allow: /
-
-User-agent: ChatGPT-User
-Allow: /
-
-User-agent: PerplexityBot
-Allow: /
-
-User-agent: ClaudeBot
-Allow: /
-
-User-agent: Google-Extended
-Allow: /
-
-User-agent: Applebot
-Allow: /
-
-User-agent: Bytespider
-Allow: /
-
-Sitemap: /sitemap.xml
-Link: /llms.txt

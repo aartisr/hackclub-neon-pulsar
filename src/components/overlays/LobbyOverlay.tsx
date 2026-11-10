@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   LucidePlay, LucideShare2, LucideCheck, LucideCopy, 
-  LucideLogOut, LucideSparkles 
+  LucideHome, LucideSparkles
 } from 'lucide-react';
 import { GameState, ChassisType } from '../../types/game';
 
@@ -75,6 +75,9 @@ export const LobbyOverlay: React.FC<LobbyOverlayProps> = ({
               <span className="text-white/20">·</span>
               <span>Standard Match (First to 5)</span>
             </div>
+            <p className="mt-2 max-w-md text-xs leading-relaxed text-white/70">
+              Each pilot joins a team. Fly into the white disc, then throw it into the other team's colored goal. First to 5 wins.
+            </p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -98,10 +101,10 @@ export const LobbyOverlay: React.FC<LobbyOverlayProps> = ({
 
             <button
               onClick={onLeave}
-              className="p-2 rounded-xl bg-white/5 hover:bg-red-500/20 border border-white/15 hover:border-red-500/40 text-white/50 hover:text-red-400 transition-colors"
-              title="Leave Lobby"
+              className="flex min-h-10 items-center gap-1.5 px-3 rounded-xl bg-white/5 hover:bg-red-500/20 border border-white/15 hover:border-red-500/40 text-white/70 hover:text-red-400 transition-colors text-xs font-bold"
+              title="Home · Leave Lobby"
             >
-              <LucideLogOut size={16} />
+              <LucideHome size={16} /> Home
             </button>
           </div>
         </div>
@@ -163,6 +166,7 @@ export const LobbyOverlay: React.FC<LobbyOverlayProps> = ({
                 </button>
               )}
             </div>
+            <p className="text-[11px] text-cyan-100/70">Your target: the Magenta goal</p>
             <div className="space-y-2 min-h-[90px]">
               {team1Players.map((p, pIdx) => (
                 <div 
@@ -197,6 +201,7 @@ export const LobbyOverlay: React.FC<LobbyOverlayProps> = ({
                 </button>
               )}
             </div>
+            <p className="text-[11px] text-fuchsia-100/70">Your target: the Cyan goal</p>
             <div className="space-y-2 min-h-[90px]">
               {team2Players.map((p, pIdx) => (
                 <div 
@@ -224,11 +229,11 @@ export const LobbyOverlay: React.FC<LobbyOverlayProps> = ({
             className="w-full min-h-12 py-3 rounded-2xl bg-gradient-to-r from-cyan-200 via-white to-fuchsia-200 hover:brightness-110 text-slate-950 font-black uppercase tracking-wider sm:tracking-[0.2em] transition-all flex items-center justify-center gap-2.5 shadow-[0_0_40px_rgba(103,232,249,0.3)] active:scale-95"
           >
             <LucidePlay size={18} fill="currentColor" />
-            Initiate Combat Round
+            Start Match
           </button>
         ) : (
           <div className="text-center py-3 text-xs text-white/50 animate-pulse font-mono-code">
-            Waiting for arena host to initiate combat sequence...
+            Waiting for the host to start the match…
           </div>
         )}
       </div>

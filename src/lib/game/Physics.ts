@@ -109,7 +109,8 @@ export class PhysicsEngine {
         // Simple goal logic: central area of ends
         const isGoal = Math.abs(disc.position[0]) < 5 && Math.abs(disc.position[1]) < 5;
         if (isGoal) {
-          if (disc.position[2] > 0) nextState.score.team1++;
+          // Cyan starts at +Z and attacks the -Z goal; Magenta attacks +Z.
+          if (disc.position[2] < 0) nextState.score.team1++;
           else nextState.score.team2++;
           
           this.resetDisc(nextState);

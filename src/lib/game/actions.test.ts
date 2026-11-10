@@ -46,3 +46,58 @@ test('physics updates do not mutate previous game state and spectators cannot co
   assert.equal(state.time, 0);
   assert.ok(next.time > 0);
 });
+
+test('a throw into the opposing colored goal scores for the attacking team', () => {
+  for (const [goalZ, scoringTeam] of [[-29, 1], [29, 2]] as const) {
+    const state = createInitialGameState();
+    state.status = 'playing';
+    state.disc.position = [0, 0, goalZ];
+    state.disc.velocity = [0, 0, goalZ < 0 ? -2 : 2];
+    const next = PhysicsEngine.update(state, {});
+    assert.equal(next.score.team1, scoringTeam === 1 ? 1 : 0);
+    assert.equal(next.score.team2, scoringTeam === 2 ? 1 : 0);
+    assert.deepEqual(next.disc.position, [0, 0, 0]);
+  }
+});
+
+test('each team can score with a straight throw toward the opposing goal', () => {
+  for (const [team, direction] of [[1, -1], [2, 1]] as const) {
+    let state = applyGameAction(createInitialGameState(), { type: 'JOIN', name: 'Pilot' }, 'pilot');
+    state = applyGameAction(state, { type: 'SWITCH_TEAM', team }, 'pilot');
+    state = applyGameAction(state, { type: 'START_GAME' }, 'pilot');
+    state.disc.ownerId = 'pilot';
+    state.players.pilot.position = [0, 0, 0];
+    state = applyGameAction(state, { type: 'THROW', direction: [0, 0, direction] }, 'pilot');
+    for (let i = 0; i < 40 && state.score.team1 + state.score.team2 === 0; i++) {
+      state = PhysicsEngine.update(state, {});
+    }
+    assert.equal(state.score.team1, team === 1 ? 1 : 0);
+    assert.equal(state.score.team2, team === 2 ? 1 : 0);
+  }
+});
+
+test('rematch resets the clock and moves pilots back to their team ends', () => {
+  let state = applyGameAction(createInitialGameState(), { type: 'JOIN', name: 'Host' }, 'host');
+  state.time = 42;
+  state.status = 'ended';
+  state.players.host.position = [8, 3, -10];
+  const next = applyGameAction(state, { type: 'START_GAME' }, 'host');
+  assert.equal(next.time, 0);
+  assert.deepEqual(next.players.host.position, [0, 0, 25]);
+});
+
+test('switching sides during a match moves the player and releases the disc', () => {
+  let state = applyGameAction(createInitialGameState(), { type: 'JOIN', name: 'Host' }, 'host');
+  state = applyGameAction(state, { type: 'START_GAME' }, 'host');
+  state.players.host.position = [3, 4, 0];
+  state.players.host.effects = [{ type: 'speed', endTime: 8 }];
+  state.disc.ownerId = 'host';
+  state.disc.position = [3, 4, 0];
+  const next = applyGameAction(state, { type: 'SWITCH_TEAM', team: 2 }, 'host');
+  assert.equal(next.players.host.team, 2);
+  assert.deepEqual(next.players.host.position, [0, 0, -25]);
+  assert.deepEqual(next.players.host.effects, []);
+  assert.equal(next.disc.ownerId, null);
+  assert.deepEqual(next.disc.position, [0, 0, 0]);
+  assert.equal(state.players.host.team, 1);
+});

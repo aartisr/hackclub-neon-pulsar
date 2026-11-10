@@ -17,8 +17,8 @@ export const RadarMap: React.FC<RadarMapProps> = ({ players, disc, myId, classNa
         <div className="absolute inset-2 border border-white/5 rounded-lg bg-white/[0.02]" />
         
         {/* Goals */}
-        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,1)]" />
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-magenta-400 shadow-[0_0_8px_rgba(217,70,239,1)]" />
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-magenta-400 shadow-[0_0_8px_rgba(217,70,239,1)]" />
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-10 h-1 bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,1)]" />
 
         {/* Grid Lines */}
         <div className="absolute inset-2 flex flex-col justify-between opacity-15">

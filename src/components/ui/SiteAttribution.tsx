@@ -15,6 +15,7 @@ export function SiteAttribution({ className }: { className?: string }) {
           Aarti S Ravikumar
         </a>
       </div>
+      <a href="/about.html" className="text-white/60 underline underline-offset-2 hover:text-white">About &amp; credits</a>
     </footer>
   );
 }

@@ -85,7 +85,7 @@ export const VictoryOverlay: React.FC<VictoryOverlayProps> = ({
             onClick={onLeave}
             className="w-full py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold uppercase tracking-wider text-white/70 hover:text-white transition-colors"
           >
-            Return to Main Menu
+            Home · Leave Room
           </button>
         </div>
 
